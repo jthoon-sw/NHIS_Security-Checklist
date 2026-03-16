@@ -304,7 +304,7 @@
             font-size: 1.2rem;
             font-weight: 700;
             margin-bottom: 20px;
-            color: var(--nhis-blue);
+            color: var(--nhis-red);
             text-align: center;
         }
         .login-input-group {
@@ -315,11 +315,18 @@
             color: #666;
         }
         .login-input-group input {
-            width: 100%;
+            width: 60%; /* 너비 60%로 조정 */
             padding: 12px;
             border: 1px solid var(--nhis-border);
             border-radius: var(--nhis-radius);
             margin-top: 5px;
+            font-size: 0.9rem;
+            outline: none;
+            box-sizing: border-box;
+            display: block; /* block으로 설정하여 너비 적용 보장 */
+        }
+        .login-input-group input:focus {
+            border-color: var(--nhis-red);
         }
         .modal-footer {
             display: flex;
@@ -328,13 +335,17 @@
         }
         .btn-login {
             flex: 2;
-            background: var(--nhis-blue);
+            background: var(--nhis-red);
             color: white;
             border: none;
             padding: 12px;
             border-radius: var(--nhis-radius);
             font-weight: 700;
             cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-login:hover {
+            background: #c00000;
         }
         .btn-cancel {
             flex: 1;
@@ -480,8 +491,8 @@
         <div class="modal-content">
             <div class="modal-header">관리자 본인인증</div>
             <div class="login-input-group">
-                <label for="adminId">ID</label>
-                <input type="text" id="adminId" placeholder="ID를 입력하세요">
+                <label for="adminId">아이디</label>
+                <input type="text" id="adminId" placeholder="아이디를 입력하세요">
             </div>
             <div class="login-input-group">
                 <label for="adminPw">PW</label>

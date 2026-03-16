@@ -110,6 +110,41 @@
             .logo-img { height: 35px; }
             .stats-bar { flex-direction: column; gap: 10px; text-align: center; }
         }
+
+        /* Storage Monitor Styles */
+        .storage-monitor {
+            background: white;
+            padding: 15px 20px;
+            margin-top: 20px;
+            border: 1px solid var(--nhis-border);
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+        .storage-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+        .progress-container {
+            height: 10px;
+            background: #eee;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        .progress-bar {
+            height: 100%;
+            background: var(--nhis-blue);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        .storage-info {
+            margin-top: 8px;
+            color: #666;
+            font-size: 0.75rem;
+            display: flex;
+            justify-content: space-between;
+        }
     </style>
 </head>
 <body>
@@ -166,6 +201,20 @@
                 </thead>
                 <tbody id="recordList"></tbody>
             </table>
+        </div>
+
+        <div class="storage-monitor">
+            <div class="storage-header">
+                <span>데이터 저장소 사용 현황</span>
+                <span id="storagePercent">0%</span>
+            </div>
+            <div class="progress-container">
+                <div id="storageBar" class="progress-bar"></div>
+            </div>
+            <div class="storage-info">
+                <span>현재 사용량: <span id="usedStorage">0 KB</span></span>
+                <span>전체 용량: 5,120 KB (5 MB)</span>
+            </div>
         </div>
     </div>
 
@@ -282,6 +331,7 @@
             const data = JSON.parse(localStorage.getItem('security_check_data') || '[]');
             localStorage.setItem('security_check_data', JSON.stringify(data.filter(i => i.id !== id)));
             renderRecords();
+            updateStorageInfo();
         }
 
         function exportCSV() {
@@ -295,7 +345,41 @@
             const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = '보안점검기록.csv'; a.click();
         }
 
-        window.onload = renderRecords;
+        function updateStorageInfo() {
+            let total = 0;
+            for (let x in localStorage) {
+                if (localStorage.hasOwnProperty(x)) {
+                    total += (localStorage[x].length + x.length) * 2; // Approximate bytes (UTF-16)
+                }
+            }
+            
+            const limit = 5 * 1024 * 1024; // 5MB
+            const usedKB = (total / 1024).toFixed(2);
+            const percent = Math.min((total / limit) * 100, 100).toFixed(1);
+            
+            document.getElementById('usedStorage').innerText = `${usedKB} KB`;
+            document.getElementById('storagePercent').innerText = `${percent}%`;
+            document.getElementById('storageBar').style.width = `${percent}%`;
+            
+            // 용량이 80% 이상차면 색상을 빨간색으로 변경
+            if (percent >= 80) {
+                document.getElementById('storageBar').style.backgroundColor = 'var(--nhis-red)';
+            } else {
+                document.getElementById('storageBar').style.backgroundColor = 'var(--nhis-blue)';
+            }
+        }
+
+        window.onload = () => {
+            renderRecords();
+            updateStorageInfo();
+        };
+
+        // 데이터 저장 시에도 업데이트
+        const originalSetItem = localStorage.setItem;
+        localStorage.setItem = function() {
+            originalSetItem.apply(this, arguments);
+            updateStorageInfo();
+        };
     </script>
 </body>
 </html>
