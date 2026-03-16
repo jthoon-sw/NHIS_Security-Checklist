@@ -114,6 +114,19 @@
             transition: border-color 0.2s;
         }
 
+        select {
+            width: 100%;
+            padding: 12px 15px; /* 패딩을 늘려 크기 확대 */
+            border: 1px solid var(--nhis-border);
+            border-radius: var(--nhis-radius);
+            font-family: inherit;
+            font-size: 0.95rem; /* 폰트도 약간 확대 */
+            outline: none;
+            transition: border-color 0.2s;
+            cursor: pointer;
+            background-color: var(--white);
+        }
+
         input:focus, select:focus {
             border-color: var(--nhis-red);
         }
@@ -174,7 +187,7 @@
             padding-left: 15px;
             background-color: #fafafa;
             font-weight: 500;
-            width: 65%;
+            width: 60%;
         }
 
         /* Radio Group in Table */
@@ -301,7 +314,15 @@
                     </div>
                     <div class="input-group">
                         <label for="position">직급</label>
-                        <input type="text" id="position" placeholder="예: 4, 5" required>
+                        <select id="position" required>
+                            <option value="">직급 선택</option>
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                            <option value="5">5</option>
+                            <option value="6">6</option>
+                        </select>
                     </div>
                     <div class="input-group">
                         <label for="userName">성명</label>
