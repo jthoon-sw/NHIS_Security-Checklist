@@ -7,8 +7,6 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
-    <!-- html2pdf.js Library -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         :root {
             --nhis-red: #e60012;
@@ -95,8 +93,12 @@
         .modal-body { background: white; padding: 25px; border-radius: 4px; position: relative; max-width: 90%; }
         .close-btn { position: absolute; top: 10px; right: 20px; font-size: 1.5rem; cursor: pointer; }
 
-        .edit-form { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; }
-        .edit-form select { width: 100%; padding: 8px; }
+        .edit-form { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
+        .edit-form .full-width { grid-column: 1 / span 2; }
+        .edit-form label { font-size: 0.7rem; color: #666; font-weight: 700; margin-bottom: 2px; display: block; }
+        .edit-form input, .edit-form select { width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.85rem; }
+        .edit-sig-box { border: 1px solid #ddd; padding: 5px; background: #f9f9f9; text-align: center; }
+        .edit-sig-img { max-height: 50px; }
 
         @media print {
             .btn-group, .stats-bar, .admin-header, .table-area, .storage-monitor { display: none !important; }
@@ -285,19 +287,60 @@
                 <h3 style="margin-bottom:15px; font-size:1rem;">자필 서명 확대</h3>
                 <img id="sigLarge" src="" style="width:100%; border:1px solid #eee;">
             </div>
-            <div id="editView" style="display:none;">
-                <h3 style="margin-bottom:15px; font-size:1rem;">점검 결과 수정</h3>
+            <div id="editView" style="display:none; max-height: 80vh; overflow-y: auto;">
+                <h3 style="margin-bottom:10px; font-size:1rem; color:var(--nhis-red); border-bottom: 2px solid #eee; padding-bottom:5px;">전체 데이터 수정</h3>
+                
                 <div class="edit-form">
-                    <div style="grid-column: 1 / span 2;">
-                        <label style="font-size:0.75rem;">점검자 구분</label>
+                    <div class="full-width">
+                        <label>제출일시</label>
+                        <input type="text" id="edit_submitTime">
+                    </div>
+                    <div>
+                        <label>부서</label>
+                        <select id="edit_department">
+                            <option value="행정지원부">행정지원부</option>
+                            <option value="자격부과부">자격부과부</option>
+                            <option value="징수부">징수부</option>
+                            <option value="지사업무지원1부">지사업무지원1부</option>
+                            <option value="요양지원1부">요양지원1부</option>
+                            <option value="요양지원2부">요양지원2부</option>
+                            <option value="요양운영부">요양운영부</option>
+                            <option value="건강관리부">건강관리부</option>
+                            <option value="건강지원센터">건강지원센터</option>
+                            <option value="보험급여부">보험급여부</option>
+                            <option value="요양기관지원부">요양기관지원부</option>
+                            <option value="지사업무지원2부">지사업무지원2부</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>점검자 구분</label>
                         <select id="edit_checkerType">
                             <option value="최종퇴청자">최종퇴청자</option>
                             <option value="당직근무자">당직근무자</option>
                         </select>
                     </div>
+                    <div>
+                        <label>직급</label>
+                        <input type="text" id="edit_position">
+                    </div>
+                    <div>
+                        <label>성명</label>
+                        <input type="text" id="edit_userName">
+                    </div>
+                    <div class="full-width" style="margin-top:5px; border-top:1px dashed #ddd; padding-top:10px;">
+                        <label>서명 (확인 및 초기화)</label>
+                        <div class="edit-sig-box">
+                            <img id="edit_sigImg" class="edit-sig-img" src="">
+                        </div>
+                    </div>
                 </div>
-                <div class="edit-form" id="editFormArea"></div>
-                <button class="btn btn-red" style="width:100%; margin-top:20px;" onclick="saveChanges()">저장</button>
+
+                <div class="edit-form" id="editFormArea" style="margin-top:10px; background:#f4f4f4; padding:10px; border-radius:4px;"></div>
+                
+                <div style="display: flex; gap: 10px; margin-top:20px;">
+                    <button class="btn btn-outline" style="flex:1;" onclick="document.getElementById('modal').style.display='none'">취소</button>
+                    <button class="btn btn-red" style="flex:2;" onclick="saveChanges()">변경 사항 저장</button>
+                </div>
             </div>
         </div>
     </div>
@@ -354,14 +397,20 @@
             document.getElementById('sigView').style.display = 'none';
             document.getElementById('editView').style.display = 'block';
             
+            // 기본 정보 매핑
+            document.getElementById('edit_submitTime').value = item.submitTime || '';
+            document.getElementById('edit_department').value = item.department || '';
             document.getElementById('edit_checkerType').value = item.checkerType || (item.items.item1?.type || '최종퇴청자');
+            document.getElementById('edit_position').value = item.position || '';
+            document.getElementById('edit_userName').value = item.userName || '';
+            document.getElementById('edit_sigImg').src = item.signature || '';
             
             const area = document.getElementById('editFormArea');
-            area.innerHTML = '';
+            area.innerHTML = '<label class="full-width" style="margin-bottom:5px;">점검 항목별 상태</label>';
             const labels = ["1.화재", "2.전원", "3.보안", "4.문단속"];
             for(let i=1; i<=4; i++){
                 const itm = item.items[`item${i}`];
-                area.innerHTML += `<div><label style="font-size:0.75rem;">${labels[i-1]}</label>
+                area.innerHTML += `<div><label>${labels[i-1]}</label>
                     <select id="edit_val_${i}">
                         <option value="양호" ${itm.value==='양호'?'selected':''}>양호</option>
                         <option value="불량" ${itm.value==='불량'?'selected':''}>불량</option>
@@ -374,10 +423,15 @@
             const data = JSON.parse(localStorage.getItem('security_check_data') || '[]');
             const idx = data.findIndex(i => i.id === currentId);
             
+            // 전체 필드 업데이트
+            data[idx].submitTime = document.getElementById('edit_submitTime').value;
+            data[idx].department = document.getElementById('edit_department').value;
             data[idx].checkerType = document.getElementById('edit_checkerType').value;
+            data[idx].position = document.getElementById('edit_position').value;
+            data[idx].userName = document.getElementById('edit_userName').value;
+            
             for(let i=1; i<=4; i++){
                 data[idx].items[`item${i}`].value = document.getElementById(`edit_val_${i}`).value;
-                // 하위 호환성을 위해 개별 항목의 type도 업데이트 (필요시)
                 if(data[idx].items[`item${i}`].type) data[idx].items[`item${i}`].type = data[idx].checkerType;
             }
             
@@ -387,6 +441,7 @@
         }
 
         function del(id) {
+            if(!confirm('정말로 삭제하시겠습니까?')) return;
             const data = JSON.parse(localStorage.getItem('security_check_data') || '[]');
             localStorage.setItem('security_check_data', JSON.stringify(data.filter(i => i.id !== id)));
             renderRecords();
@@ -396,27 +451,9 @@
         function exportOfficialPDF() {
             try {
                 prepareOfficialTable();
-                
-                const element = document.getElementById('officialFormArea');
-                element.style.display = 'block'; // 잠깐 표시하여 캡처
-                
-                const opt = {
-                    margin: [10, 10, 10, 10],
-                    filename: `보안점검표_${document.getElementById('deptSelector').value}_${new Date().toLocaleDateString()}.pdf`,
-                    image: { type: 'jpeg', quality: 0.98 },
-                    html2canvas: { scale: 2, useCORS: true, logging: false },
-                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
-                };
-
-                // PDF 생성 및 저장
-                html2pdf().set(opt).from(element).save().then(() => {
-                    element.style.display = 'none'; // 다시 숨김
-                }).catch(err => {
-                    console.error('PDF 저장 실패:', err);
-                    alert('PDF 저장 중 문제가 발생했습니다.');
-                    element.style.display = 'none';
-                });
-
+                setTimeout(() => {
+                    window.print();
+                }, 100);
             } catch (e) {
                 alert('PDF 준비 중 오류가 발생했습니다: ' + e.message);
                 console.error(e);
