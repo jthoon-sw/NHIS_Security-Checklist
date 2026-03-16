@@ -134,7 +134,7 @@
             align-items: center;
             gap: 6px;
             cursor: pointer;
-            font-size: 0.95rem;
+            font-size: 0.85rem;
             font-weight: 500;
         }
 
@@ -160,7 +160,7 @@
             padding: 15px 10px;
             border: 1px solid #efefef;
             text-align: center;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
         }
 
         th {
@@ -427,14 +427,18 @@
 
             form.addEventListener('submit', (e) => {
                 e.preventDefault();
-                if(!hasSignature){ alert('서명을 완료해 주세요.'); return; }
+                if(!hasSignature){ alert('미입력된 자료가 있습니다.'); return; }
                 
                 const checkerType = form.elements['checkerType'].value;
                 const resultItems = {};
                 for(let i=1; i<=4; i++){
                     const val = form.elements[`item${i}`].value;
-                    if(!val){ alert('모든 항목을 점검해 주세요.'); return; }
+                    if(!val){ alert('미입력된 자료가 있습니다.'); return; }
                     resultItems[`item${i}`] = { value: val };
+                }
+
+                if(!document.getElementById('department').value || !document.getElementById('position').value || !document.getElementById('userName').value){
+                    alert('미입력된 자료가 있습니다.'); return;
                 }
 
                 const now = new Date();
