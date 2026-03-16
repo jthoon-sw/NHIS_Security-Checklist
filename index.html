@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>국민건강보험 - 보안점검표</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -496,6 +496,12 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            // 새로고침 시 최상단으로 이동
+            if ('scrollRestoration' in history) {
+                history.scrollRestoration = 'manual';
+            }
+            window.scrollTo(0, 0);
+
             const dateInput = document.getElementById('checkDate');
             const form = document.getElementById('securityForm');
             const canvas = document.getElementById('signatureCanvas');
