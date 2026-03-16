@@ -85,10 +85,12 @@
 
         .input-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
             gap: 15px;
             margin-bottom: 20px;
         }
+
+        .input-grid.row-1 { grid-template-columns: 1.3fr 0.7fr; }
+        .input-grid.row-2 { grid-template-columns: 0.7fr 1.3fr; }
 
         .input-group {
             margin-bottom: 0px;
@@ -104,7 +106,6 @@
         input[type="text"],
         input[type="date"] {
             width: 100%;
-            max-width: 50%;
             padding: 10px 12px;
             border: 1px solid var(--nhis-border);
             border-radius: var(--nhis-radius);
@@ -287,9 +288,9 @@
 
     <div class="main-content">
         <div class="form-card">
-            <form id="securityForm">
+            <form id="securityForm" novalidate>
                 <div class="section-title">기본 정보 입력</div>
-                <div class="input-grid">
+                <div class="input-grid row-1">
                     <div class="input-group">
                         <label for="checkDate">점검 일자</label>
                         <input type="date" id="checkDate" required>
@@ -312,10 +313,12 @@
                             <option value="지사업무지원2부">지사업무지원2부</option>
                         </select>
                     </div>
+                </div>
+                <div class="input-grid row-2">
                     <div class="input-group">
                         <label for="position">직급</label>
                         <select id="position" required>
-                            <option value="">직급 선택</option>
+                            <option value="">직급을 선택해 주세요</option>
                             <option value="1">1</option>
                             <option value="2">2</option>
                             <option value="3">3</option>
