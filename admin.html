@@ -19,7 +19,6 @@
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'Noto Sans KR', sans-serif; background-color: #eee; color: var(--nhis-text); }
 
-        /* Admin Header: Same as main page */
         .admin-header {
             background-color: var(--white);
             padding: 10px 20px;
@@ -68,11 +67,11 @@
         .btn-gray { background: #666; color: white; }
 
         .table-area { background: white; border: 1px solid var(--nhis-border); overflow-x: auto; border-radius: 4px; }
-        table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
         th, td { padding: 12px 6px; border-bottom: 1px solid #eee; text-align: center; }
         th { background: #f8f8f8; color: #555; font-weight: 700; border-top: 1px solid #333; }
 
-        .badge { padding: 3px 6px; border-radius: 2px; font-weight: 700; font-size: 0.7rem; }
+        .badge { padding: 3px 6px; border-radius: 2px; font-weight: 700; font-size: 0.73rem; }
         .badge-ok { color: #007e33; background: #e8f5e9; }
         .badge-no { color: #cc0000; background: #ffebee; }
         .badge-type { color: #0054a6; border: 1px solid #0054a6; font-weight: 500; }
@@ -146,9 +145,10 @@
             <table>
                 <thead>
                     <tr>
-                        <th style="width: 15%;">제출일시</th>
-                        <th style="width: 12%;">부서</th>
-                        <th style="width: 15%;">직급/성명</th>
+                        <th style="width: 14%;">제출일시</th>
+                        <th style="width: 13%;">부서</th>
+                        <th style="width: 14%;">직급/성명</th>
+                        <th style="width: 10%;">구분</th>
                         <th>1.화재</th>
                         <th>2.전원</th>
                         <th>3.보안</th>
@@ -171,6 +171,15 @@
             </div>
             <div id="editView" style="display:none;">
                 <h3 style="margin-bottom:15px; font-size:1rem;">점검 결과 수정</h3>
+                <div class="edit-form">
+                    <div style="grid-column: 1 / span 2;">
+                        <label style="font-size:0.75rem;">점검자 구분</label>
+                        <select id="edit_checkerType">
+                            <option value="최종퇴청자">최종퇴청자</option>
+                            <option value="당직근무자">당직근무자</option>
+                        </select>
+                    </div>
+                </div>
                 <div class="edit-form" id="editFormArea"></div>
                 <button class="btn btn-red" style="width:100%; margin-top:20px;" onclick="saveChanges()">저장</button>
             </div>
@@ -195,13 +204,14 @@
                     const obj = item.items[key];
                     if(!obj) return `<td>-</td>`;
                     const cls = obj.value === '양호' ? 'badge-ok' : 'badge-no';
-                    return `<td><span class="badge badge-type">${obj.type}</span><br><span class="badge ${cls}">${obj.value}</span></td>`;
+                    return `<td><span class="badge ${cls}">${obj.value}</span></td>`;
                 };
 
                 tr.innerHTML = `
                     <td>${item.submitTime}</td>
                     <td>${item.department}</td>
                     <td>${item.position} / ${item.userName}</td>
+                    <td><span class="badge badge-type">${item.checkerType || (item.items.item1?.type || '-')}</span></td>
                     ${getBadge('item1')} ${getBadge('item2')} ${getBadge('item3')} ${getBadge('item4')}
                     <td><img src="${item.signature}" class="sig-thumbnail" onclick="showSig('${item.signature}')"></td>
                     <td>
@@ -228,17 +238,15 @@
             document.getElementById('sigView').style.display = 'none';
             document.getElementById('editView').style.display = 'block';
             
+            document.getElementById('edit_checkerType').value = item.checkerType || (item.items.item1?.type || '최종퇴청자');
+            
             const area = document.getElementById('editFormArea');
             area.innerHTML = '';
             const labels = ["1.화재", "2.전원", "3.보안", "4.문단속"];
             for(let i=1; i<=4; i++){
                 const itm = item.items[`item${i}`];
                 area.innerHTML += `<div><label style="font-size:0.75rem;">${labels[i-1]}</label>
-                    <select id="edit_type_${i}">
-                        <option value="퇴청자" ${itm.type==='퇴청자'?'selected':''}>퇴청자</option>
-                        <option value="당직자" ${itm.type==='당직자'?'selected':''}>당직자</option>
-                    </select>
-                    <select id="edit_val_${i}" style="margin-top:5px;">
+                    <select id="edit_val_${i}">
                         <option value="양호" ${itm.value==='양호'?'selected':''}>양호</option>
                         <option value="불량" ${itm.value==='불량'?'selected':''}>불량</option>
                     </select></div>`;
@@ -249,10 +257,14 @@
         function saveChanges() {
             const data = JSON.parse(localStorage.getItem('security_check_data') || '[]');
             const idx = data.findIndex(i => i.id === currentId);
+            
+            data[idx].checkerType = document.getElementById('edit_checkerType').value;
             for(let i=1; i<=4; i++){
-                data[idx].items[`item${i}`].type = document.getElementById(`edit_type_${i}`).value;
                 data[idx].items[`item${i}`].value = document.getElementById(`edit_val_${i}`).value;
+                // 하위 호환성을 위해 개별 항목의 type도 업데이트 (필요시)
+                if(data[idx].items[`item${i}`].type) data[idx].items[`item${i}`].type = data[idx].checkerType;
             }
+            
             localStorage.setItem('security_check_data', JSON.stringify(data));
             document.getElementById('modal').style.display = 'none';
             renderRecords();
@@ -267,9 +279,10 @@
 
         function exportCSV() {
             const data = JSON.parse(localStorage.getItem('security_check_data') || '[]');
-            let csv = "\uFEFF제출일시,부서,성명,1.화재,2.전원,3.보안,4.문단속\n";
+            let csv = "\uFEFF제출일시,부서,성명,구분,1.화재,2.전원,3.보안,4.문단속\n";
             data.forEach(i => {
-                csv += `"${i.submitTime}","${i.department}","${i.userName}","${i.items.item1.type}(${i.items.item1.value})","${i.items.item2.type}(${i.items.item2.value})","${i.items.item3.type}(${i.items.item3.value})","${i.items.item4.type}(${i.items.item4.value})"\n`;
+                const type = i.checkerType || i.items.item1.type;
+                csv += `"${i.submitTime}","${i.department}","${i.userName}","${type}","${i.items.item1.value}","${i.items.item2.value}","${i.items.item3.value}","${i.items.item4.value}"\n`;
             });
             const b = new Blob([csv], {type:'text/csv;charset=utf-8;'});
             const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = '보안점검기록.csv'; a.click();

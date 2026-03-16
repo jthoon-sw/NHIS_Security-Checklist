@@ -33,7 +33,6 @@
             line-height: 1.6;
         }
 
-        /* NHIS Header Style: Left Logo, Center Title */
         .header-top {
             background-color: var(--white);
             border-bottom: 2px solid var(--nhis-red);
@@ -48,23 +47,9 @@
             height: 70px;
         }
 
-        .logo-area {
-            display: flex;
-            align-items: center;
-        }
-
-        .logo-img {
-            height: 50px;
-            object-fit: contain;
-        }
-
-        .header-title {
-            grid-column: 2;
-            font-size: 1.4rem;
-            font-weight: 700;
-            color: #111;
-            letter-spacing: -0.5px;
-        }
+        .logo-area { display: flex; align-items: center; }
+        .logo-img { height: 50px; object-fit: contain; }
+        .header-title { grid-column: 2; font-size: 1.4rem; font-weight: 700; color: #111; letter-spacing: -0.5px; }
 
         .main-content {
             max-width: 800px;
@@ -102,10 +87,11 @@
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 15px;
+            margin-bottom: 20px;
         }
 
         .input-group {
-            margin-bottom: 15px;
+            margin-bottom: 0px;
         }
 
         label {
@@ -128,17 +114,37 @@
             transition: border-color 0.2s;
         }
 
-        /* Mobile Date Input Optimization */
-        input[type="date"] {
-            max-width: 100%;
-            font-size: 0.85rem;
-        }
-
         input:focus, select:focus {
             border-color: var(--nhis-red);
         }
 
-        /* Optimized Table with Dropdowns for Mobile */
+        /* Checker Selection Styling */
+        .checker-selection {
+            display: flex;
+            gap: 15px;
+            padding: 12px;
+            background: #fdf2f2;
+            border: 1px solid #fecaca;
+            border-radius: var(--nhis-radius);
+            margin-bottom: 20px;
+        }
+
+        .radio-option {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+
+        .radio-option input {
+            accent-color: var(--nhis-red);
+            width: 18px;
+            height: 18px;
+        }
+
+        /* Table Style */
         .table-wrapper {
             margin: 15px 0;
             border-top: 2px solid #333;
@@ -151,10 +157,10 @@
         }
 
         th, td {
-            padding: 12px 8px;
+            padding: 15px 10px;
             border: 1px solid #efefef;
             text-align: center;
-            font-size: 0.85rem;
+            font-size: 0.9rem;
         }
 
         th {
@@ -165,21 +171,17 @@
 
         td:first-child {
             text-align: left;
-            padding-left: 12px;
+            padding-left: 15px;
             background-color: #fafafa;
             font-weight: 500;
-            width: 40%;
+            width: 45%;
         }
 
-        .select-set {
+        /* Radio Group in Table */
+        .item-status-group {
             display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .select-set select {
-            padding: 6px 8px;
-            font-size: 0.8rem;
+            justify-content: center;
+            gap: 20px;
         }
 
         /* Signature Pad */
@@ -252,13 +254,13 @@
                 grid-column: 2;
                 font-size: 1.1rem;
                 justify-self: center;
-                margin-right: 40px; /* Symmetry adjustment for logo */
+                margin-right: 40px;
             }
             .logo-img { height: 35px; }
             .form-card { padding: 20px; }
             .input-grid { grid-template-columns: 1fr; }
-            th, td { padding: 8px 4px; font-size: 0.8rem; }
-            td:first-child { width: 35%; }
+            th, td { padding: 12px 5px; font-size: 0.85rem; }
+            .item-status-group { gap: 10px; }
         }
     </style>
 </head>
@@ -307,81 +309,59 @@
                     </div>
                 </div>
 
+                <div class="section-title">점검자 구분</div>
+                <div class="checker-selection">
+                    <label class="radio-option">
+                        <input type="radio" name="checkerType" value="최종퇴청자" required checked> 최종퇴청자
+                    </label>
+                    <label class="radio-option">
+                        <input type="radio" name="checkerType" value="당직근무자"> 당직근무자
+                    </label>
+                </div>
+
                 <div class="section-title">점검 항목 확인</div>
                 <div class="table-wrapper">
                     <table>
                         <thead>
                             <tr>
                                 <th>점검항목</th>
-                                <th>점검 결과 (선택)</th>
+                                <th>점검 결과 (체크)</th>
                             </tr>
                         </thead>
                         <tbody id="checkItems">
                             <tr data-row="1">
                                 <td>1. 화재 단속상태</td>
                                 <td>
-                                    <div class="select-set">
-                                        <select name="item1_type" required>
-                                            <option value="">점검자 선택</option>
-                                            <option value="퇴청자">퇴청자 점검</option>
-                                            <option value="당직자">당직자 점검</option>
-                                        </select>
-                                        <select name="item1_value" required>
-                                            <option value="">상태 선택</option>
-                                            <option value="양호">양호</option>
-                                            <option value="불량">불량</option>
-                                        </select>
+                                    <div class="item-status-group">
+                                        <label class="radio-option"><input type="radio" name="item1" value="양호" required> 양호</label>
+                                        <label class="radio-option"><input type="radio" name="item1" value="불량"> 불량</label>
                                     </div>
                                 </td>
                             </tr>
                             <tr data-row="2">
                                 <td>2. 소등 및 각종 전원상태</td>
                                 <td>
-                                    <div class="select-set">
-                                        <select name="item2_type" required>
-                                            <option value="">점검자 선택</option>
-                                            <option value="퇴청자">퇴청자 점검</option>
-                                            <option value="당직자">당직자 점검</option>
-                                        </select>
-                                        <select name="item2_value" required>
-                                            <option value="">상태 선택</option>
-                                            <option value="양호">양호</option>
-                                            <option value="불량">불량</option>
-                                        </select>
+                                    <div class="item-status-group">
+                                        <label class="radio-option"><input type="radio" name="item2" value="양호" required> 양호</label>
+                                        <label class="radio-option"><input type="radio" name="item2" value="불량"> 불량</label>
                                     </div>
                                 </td>
                             </tr>
                             <tr data-row="3">
                                 <td>3. 서류보관/잠금장치상태</td>
                                 <td>
-                                    <div class="select-set">
-                                        <select name="item3_type" required>
-                                            <option value="">점검자 선택</option>
-                                            <option value="퇴청자">퇴청자 점검</option>
-                                            <option value="당직자">당직자 점검</option>
-                                        </select>
-                                        <select name="item3_value" required>
-                                            <option value="">상태 선택</option>
-                                            <option value="양호">양호</option>
-                                            <option value="불량">불량</option>
-                                        </select>
+                                    <div class="item-status-group">
+                                        <label class="radio-option"><input type="radio" name="item3" value="양호" required> 양호</label>
+                                        <label class="radio-option"><input type="radio" name="item3" value="불량"> 불량</label>
                                     </div>
                                 </td>
                             </tr>
                             <tr data-row="4">
                                 <td>4. 문단속 상태</td>
                                 <td>
-                                    <div class="select-set">
-                                        <select name="item4_type" required>
-                                            <option value="">점검자 선택</option>
-                                            <option value="퇴청자">퇴청자 점검</option>
-                                            <option value="당직자">당직자 점검</option>
-                                        </select>
-                                        <select name="item4_value" required>
-                                            <option value="">상태 선택</option>
-                                            <option value="양호">양호</option>
-                                            <option value="불량">불량</option>
-                                        </select>
+                                    <div class="item-status-group">
+                                        <label class="radio-option"><input type="radio" name="item4" value="양호" required> 양호</label>
+                                        <label class="radio-option"><input type="radio" name="item4" value="불량"> 불량</label>
                                     </div>
                                 </td>
                             </tr>
@@ -449,12 +429,12 @@
                 e.preventDefault();
                 if(!hasSignature){ alert('서명을 완료해 주세요.'); return; }
                 
+                const checkerType = form.elements['checkerType'].value;
                 const resultItems = {};
                 for(let i=1; i<=4; i++){
-                    const type = document.getElementsByName(`item${i}_type`)[0].value;
-                    const val = document.getElementsByName(`item${i}_value`)[0].value;
-                    if(!type || !val){ alert('모든 항목의 점검자 및 상태를 선택해 주세요.'); return; }
-                    resultItems[`item${i}`] = { type, value: val };
+                    const val = form.elements[`item${i}`].value;
+                    if(!val){ alert('모든 항목을 점검해 주세요.'); return; }
+                    resultItems[`item${i}`] = { value: val };
                 }
 
                 const now = new Date();
@@ -465,6 +445,7 @@
                     department: document.getElementById('department').value,
                     position: document.getElementById('position').value,
                     userName: document.getElementById('userName').value,
+                    checkerType,
                     items: resultItems,
                     signature: canvas.toDataURL()
                 };
