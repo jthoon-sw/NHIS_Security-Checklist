@@ -31,6 +31,7 @@
             background-color: var(--nhis-gray-bg);
             color: var(--nhis-text);
             line-height: 1.6;
+            color-scheme: light; /* Force light mode for system widgets */
         }
 
         .header-top {
@@ -104,7 +105,7 @@
         input[type="text"],
         input[type="date"] {
             width: 100%;
-            max-width: 70%;
+            max-width: 60%; /* 너비 60%로 조정 */
             padding: 10px 12px;
             border: 1px solid var(--nhis-border);
             border-radius: var(--nhis-radius);
@@ -112,6 +113,8 @@
             font-size: 0.9rem;
             outline: none;
             transition: border-color 0.2s;
+            background-color: var(--white);
+            color: var(--nhis-text);
         }
 
         select {
@@ -276,6 +279,71 @@
             th, td { padding: 12px 5px; font-size: 0.85rem; }
             .item-status-group { gap: 10px; }
         }
+
+        /* Login Modal Styles */
+        #loginModal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: var(--nhis-radius);
+            width: 90%;
+            max-width: 350px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+        .modal-header {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: var(--nhis-blue);
+            text-align: center;
+        }
+        .login-input-group {
+            margin-bottom: 15px;
+        }
+        .login-input-group label {
+            font-size: 0.8rem;
+            color: #666;
+        }
+        .login-input-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--nhis-border);
+            border-radius: var(--nhis-radius);
+            margin-top: 5px;
+        }
+        .modal-footer {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .btn-login {
+            flex: 2;
+            background: var(--nhis-blue);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: var(--nhis-radius);
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .btn-cancel {
+            flex: 1;
+            background: #eee;
+            color: #333;
+            border: none;
+            padding: 12px;
+            border-radius: var(--nhis-radius);
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -402,7 +470,26 @@
 
                 <button type="submit" class="btn-submit">점검표 최종 제출하기</button>
             </form>
-            <a href="admin.html" class="admin-nav">관리자 페이지 접속</a>
+            <a href="#" class="admin-nav" id="btnAdminAccess">관리자 페이지 접속</a>
+        </div>
+    </div>
+
+    <!-- Login Modal -->
+    <div id="loginModal">
+        <div class="modal-content">
+            <div class="modal-header">관리자 본인인증</div>
+            <div class="login-input-group">
+                <label for="adminId">ID</label>
+                <input type="text" id="adminId" placeholder="ID를 입력하세요">
+            </div>
+            <div class="login-input-group">
+                <label for="adminPw">PW</label>
+                <input type="password" id="adminPw" placeholder="비밀번호를 입력하세요">
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" id="btnLoginCancel">취소</button>
+                <button class="btn-login" id="btnLoginSubmit">접속하기</button>
+            </div>
         </div>
     </div>
 
@@ -486,6 +573,47 @@
                 localStorage.setItem('security_check_data', JSON.stringify(data));
                 alert(`성공적으로 제출되었습니다.\n제출일시: ${submission.submitTime}`);
                 location.reload();
+            });
+
+            // Admin Login Logic
+            const adminBtn = document.getElementById('btnAdminAccess');
+            const loginModal = document.getElementById('loginModal');
+            const cancelBtn = document.getElementById('btnLoginCancel');
+            const submitBtn = document.getElementById('btnLoginSubmit');
+            const adminIdInput = document.getElementById('adminId');
+            const adminPwInput = document.getElementById('adminPw');
+
+            adminBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                loginModal.style.display = 'flex';
+                adminIdInput.focus();
+            });
+
+            cancelBtn.addEventListener('click', () => {
+                loginModal.style.display = 'none';
+                adminIdInput.value = '';
+                adminPwInput.value = '';
+            });
+
+            const performLogin = () => {
+                const id = adminIdInput.value.trim();
+                const pw = adminPwInput.value.trim();
+
+                // ID: 180043, PW: 1111 (Based on IDPW.xlsx)
+                if (id === '180043' && pw === '1111') {
+                    window.location.href = 'admin.html';
+                } else {
+                    alert('ID 혹은 PW를 확인하세요.');
+                }
+            };
+
+            submitBtn.addEventListener('click', performLogin);
+            
+            // Enter key support
+            [adminIdInput, adminPwInput].forEach(input => {
+                input.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') performLogin();
+                });
             });
         });
     </script>
