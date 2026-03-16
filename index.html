@@ -124,13 +124,19 @@
             border: 1px solid var(--nhis-border);
             border-radius: var(--nhis-radius);
             font-family: inherit;
-            font-size: 0.9rem; /* input과 동일하게 조정 */
+            font-size: 0.9rem;
             outline: none;
             transition: border-color 0.2s;
             cursor: pointer;
             background-color: var(--white);
-            color: var(--nhis-text); /* 색상 통일 */
+            color: var(--nhis-muted); /* 초기 회색 설정 */
         }
+
+        select option { color: var(--nhis-text); }
+        select option[value=""] { color: var(--nhis-muted); }
+        
+        /* 값이 선택되었을 때의 색상 제어용 클래스 */
+        select.has-value { color: var(--nhis-text); }
 
         input:focus, select:focus {
             border-color: var(--nhis-red);
@@ -521,6 +527,17 @@
 
             const today = new Date();
             dateInput.value = today.toISOString().slice(0, 10);
+
+            // Select color toggle logic
+            const selects = [document.getElementById('department'), document.getElementById('position')];
+            selects.forEach(sel => {
+                const updateColor = () => {
+                    if (sel.value) sel.classList.add('has-value');
+                    else sel.classList.remove('has-value');
+                };
+                sel.addEventListener('change', updateColor);
+                updateColor(); // Initial check
+            });
 
             // Signature Logic
             let isDrawing = false;
