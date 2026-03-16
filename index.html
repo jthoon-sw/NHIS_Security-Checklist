@@ -105,7 +105,7 @@
         input[type="text"],
         input[type="date"] {
             width: 100%;
-            max-width: 60%; /* 너비 60%로 조정 */
+            max-width: 61%; /* 너비 61%로 정밀 조정 */
             padding: 10px 12px;
             border: 1px solid var(--nhis-border);
             border-radius: var(--nhis-radius);
@@ -124,11 +124,12 @@
             border: 1px solid var(--nhis-border);
             border-radius: var(--nhis-radius);
             font-family: inherit;
-            font-size: 0.95rem;
+            font-size: 0.9rem; /* input과 동일하게 조정 */
             outline: none;
             transition: border-color 0.2s;
             cursor: pointer;
             background-color: var(--white);
+            color: var(--nhis-text); /* 색상 통일 */
         }
 
         input:focus, select:focus {
@@ -395,7 +396,7 @@
                     </div>
                     <div class="input-group">
                         <label for="userName">성명</label>
-                        <input type="text" id="userName" placeholder="성명을 입력하세요" required>
+                        <input type="text" id="userName" placeholder="성명을 입력해 주세요" required>
                     </div>
                 </div>
 
