@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>보안 기록 관리 시스템 - 국민건강보험</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --nhis-red: #e60012;
+            --nhis-blue: #0054a6;
+            --nhis-text: #333;
+            --nhis-gray: #f4f4f4;
+            --nhis-border: #e2e2e2;
+            --white: #ffffff;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Noto Sans KR', sans-serif; background-color: #eee; color: var(--nhis-text); }
+
+        .admin-header {
+            background-color: var(--white);
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 3px solid var(--nhis-red);
+        }
+
+        .logo-text { font-size: 1.4rem; font-weight: 700; color: #111; display: flex; align-items: center; gap: 8px; }
+        .logo-badge { background: var(--nhis-red); color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.9rem; }
+
+        .container { max-width: 1400px; margin: 30px auto; padding: 0 20px; }
+
+        .stats-bar {
+            background: var(--white);
+            padding: 20px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid var(--nhis-border);
+        }
+
+        .filter-group { display: flex; align-items: center; gap: 10px; }
+        select { padding: 10px; border: 1px solid var(--nhis-border); outline: none; }
+
+        .btn-group { display: flex; gap: 8px; }
+        .btn {
+            padding: 10px 20px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            font-size: 0.9rem;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .btn-red { background: var(--nhis-red); color: white; }
+        .btn-outline { background: white; border: 1px solid #777; color: #333; }
+        .btn-gray { background: #666; color: white; }
+
+        .table-area { background: white; border: 1px solid var(--nhis-border); overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        th, td { padding: 15px 10px; border-bottom: 1px solid #eee; text-align: center; }
+        th { background: #f8f8f8; color: #555; font-weight: 700; border-top: 1px solid #333; }
+
+        .badge { padding: 4px 8px; border-radius: 2px; font-weight: 700; font-size: 0.75rem; }
+        .badge-ok { color: #007e33; background: #e8f5e9; }
+        .badge-no { color: #cc0000; background: #ffebee; }
+        .badge-type { color: #0054a6; border: 1px solid #0054a6; font-weight: 500; }
+
+        .sig-thumbnail { max-height: 40px; border: 1px solid #ddd; cursor: pointer; }
+
+        /* Modal */
+        #modal {
+            display: none; fixed: top 0 left 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); position: fixed; z-index: 1000;
+            justify-content: center; align-items: center;
+        }
+        .modal-body { background: white; padding: 30px; border-radius: 4px; position: relative; max-width: 90%; }
+        .close-btn { position: absolute; top: 10px; right: 20px; font-size: 2rem; cursor: pointer; }
+
+        .edit-form { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; }
+        .edit-form select { width: 100%; }
+
+        @media print {
+            .btn-group, .stats-bar, .admin-header, th:last-child, td:last-child { display: none !important; }
+            body { background: white; padding: 0; }
+            .container { margin: 0; padding: 0; max-width: none; }
+            table { font-size: 10pt; }
+            th { border-top: 2px solid #000; }
+            .badge { background: none !important; border: none !important; padding: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-header">
+        <div class="logo-text">국민건강보험 <span class="logo-badge">보안관리시스템</span></div>
+        <div class="btn-group">
+            <a href="index.html" class="btn btn-outline">점검표 메인</a>
+            <button onclick="window.print()" class="btn btn-gray">PDF 출력</button>
+            <button onclick="exportCSV()" class="btn btn-red">엑셀(CSV) 저장</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="stats-bar">
+            <div class="filter-group">
+                <label style="font-weight:700;">부서별 필터:</label>
+                <select id="deptSelector" onchange="renderRecords()">
+                    <option value="전체">전체 부서</option>
+                    <option value="행정지원부">행정지원부</option>
+                    <option value="자격부과부">자격부과부</option>
+                    <option value="징수부">징수부</option>
+                    <option value="지사업무지원1부">지사업무지원1부</option>
+                    <option value="요양지원1부">요양지원1부</option>
+                    <option value="요양지원2부">요양지원2부</option>
+                    <option value="요양운영부">요양운영부</option>
+                    <option value="건강관리부">건강관리부</option>
+                    <option value="건강지원센터">건강지원센터</option>
+                    <option value="보험급여부">보험급여부</option>
+                    <option value="요양기관지원부">요양기관지원부</option>
+                    <option value="지사업무지원2부">지사업무지원2부</option>
+                </select>
+            </div>
+            <div id="statusCount" style="font-weight:700; color:var(--nhis-red);">총 0건의 기록</div>
+        </div>
+
+        <div class="table-area">
+            <table>
+                <thead>
+                    <tr>
+                        <th>제출일시</th>
+                        <th>부서</th>
+                        <th>대상자(직급/성명)</th>
+                        <th>1.화재</th>
+                        <th>2.전원</th>
+                        <th>3.보안</th>
+                        <th>4.문단속</th>
+                        <th>서명</th>
+                        <th>관리</th>
+                    </tr>
+                </thead>
+                <tbody id="recordList"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="modal" onclick="this.style.display='none'">
+        <div class="modal-body" onclick="event.stopPropagation()">
+            <span class="close-btn" onclick="document.getElementById('modal').style.display='none'">&times;</span>
+            <div id="sigView">
+                <h3 style="margin-bottom:20px;">자필 서명 확인</h3>
+                <img id="sigLarge" src="" style="width:100%; border:1px solid #eee;">
+            </div>
+            <div id="editView" style="display:none;">
+                <h3 style="margin-bottom:20px;">점검 결과 수정</h3>
+                <div class="edit-form" id="editFormArea"></div>
+                <button class="btn btn-red" style="width:100%; margin-top:20px;" onclick="saveChanges()">수정 내용 저장</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentId = null;
+
+        function renderRecords() {
+            const data = JSON.parse(localStorage.getItem('security_check_data') || '[]');
+            const filter = document.getElementById('deptSelector').value;
+            const list = document.getElementById('recordList');
+            const filtered = filter === '전체' ? data : data.filter(i => i.department === filter);
+            
+            document.getElementById('statusCount').innerText = `총 ${filtered.length}건의 기록`;
+            list.innerHTML = '';
+
+            filtered.sort((a,b) => b.id - a.id).forEach(item => {
+                const tr = document.createElement('tr');
+                const getBadge = (key) => {
+                    const obj = item.items[key];
+                    const cls = obj.value === '양호' ? 'badge-ok' : 'badge-no';
+                    return `<td><span class="badge badge-type">${obj.type}</span> <span class="badge ${cls}">${obj.value}</span></td>`;
+                };
+
+                tr.innerHTML = `
+                    <td>${item.submitTime}</td>
+                    <td>${item.department}</td>
+                    <td>${item.position} / ${item.userName}</td>
+                    ${getBadge('item1')} ${getBadge('item2')} ${getBadge('item3')} ${getBadge('item4')}
+                    <td><img src="${item.signature}" class="sig-thumbnail" onclick="showSig('${item.signature}')"></td>
+                    <td>
+                        <button class="btn btn-outline" style="padding:4px 8px; font-size:0.7rem;" onclick="openEdit(${item.id})">수정</button>
+                        <button class="btn btn-gray" style="padding:4px 8px; font-size:0.7rem; margin-top:4px;" onclick="del(${item.id})">삭제</button>
+                    </td>
+                `;
+                list.appendChild(tr);
+            });
+        }
+
+        function showSig(src) {
+            document.getElementById('sigView').style.display = 'block';
+            document.getElementById('editView').style.display = 'none';
+            document.getElementById('sigLarge').src = src;
+            document.getElementById('modal').style.display = 'flex';
+        }
+
+        function openEdit(id) {
+            currentId = id;
+            const data = JSON.parse(localStorage.getItem('security_check_data') || '[]');
+            const item = data.find(i => i.id === id);
+            
+            document.getElementById('sigView').style.display = 'none';
+            document.getElementById('editView').style.display = 'block';
+            
+            const area = document.getElementById('editFormArea');
+            area.innerHTML = '';
+            const labels = ["1.화재", "2.전원", "3.보안", "4.문단속"];
+            for(let i=1; i<=4; i++){
+                const val = item.items[`item${i}`].value;
+                area.innerHTML += `<div><label style="font-size:0.8rem;">${labels[i-1]}</label>
+                    <select id="edit_${i}">
+                        <option value="양호" ${val==='양호'?'selected':''}>양호</option>
+                        <option value="불량" ${val==='불량'?'selected':''}>불량</option>
+                    </select></div>`;
+            }
+            document.getElementById('modal').style.display = 'flex';
+        }
+
+        function saveChanges() {
+            const data = JSON.parse(localStorage.getItem('security_check_data') || '[]');
+            const idx = data.findIndex(i => i.id === currentId);
+            for(let i=1; i<=4; i++){
+                data[idx].items[`item${i}`].value = document.getElementById(`edit_${i}`).value;
+            }
+            localStorage.setItem('security_check_data', JSON.stringify(data));
+            document.getElementById('modal').style.display = 'none';
+            renderRecords();
+        }
+
+        function del(id) {
+            if(!confirm('기록을 삭제하시겠습니까?')) return;
+            const data = JSON.parse(localStorage.getItem('security_check_data') || '[]');
+            localStorage.setItem('security_check_data', JSON.stringify(data.filter(i => i.id !== id)));
+            renderRecords();
+        }
+
+        function exportCSV() {
+            const data = JSON.parse(localStorage.getItem('security_check_data') || '[]');
+            let csv = "\uFEFF제출일시,부서,성명,1.화재,2.전원,3.보안,4.문단속\n";
+            data.forEach(i => {
+                csv += `"${i.submitTime}","${i.department}","${i.userName}","${i.items.item1.value}","${i.items.item2.value}","${i.items.item3.value}","${i.items.item4.value}"\n`;
+            });
+            const b = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+            const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = '보안기록.csv'; a.click();
+        }
+
+        window.onload = renderRecords;
+    </script>
+</body>
+</html>
