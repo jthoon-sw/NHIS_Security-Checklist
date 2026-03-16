@@ -97,8 +97,10 @@
         .edit-form .full-width { grid-column: 1 / span 2; }
         .edit-form label { font-size: 0.7rem; color: #666; font-weight: 700; margin-bottom: 2px; display: block; }
         .edit-form input, .edit-form select { width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.85rem; }
-        .edit-sig-box { border: 1px solid #ddd; padding: 5px; background: #f9f9f9; text-align: center; }
-        .edit-sig-img { max-height: 50px; }
+        .edit-sig-container { border: 1px solid #ddd; background: #fff; position: relative; height: 100px; margin-top: 5px; }
+        #editSignatureCanvas { width: 100%; height: 100%; touch-action: none; cursor: crosshair; }
+        .edit-sig-tools { display: flex; justify-content: space-between; align-items: center; margin-top: 5px; }
+        .edit-sig-hint { font-size: 0.65rem; color: #999; }
 
         @media print {
             .btn-group, .stats-bar, .admin-header, .table-area, .storage-monitor { display: none !important; }
@@ -206,16 +208,12 @@
             <table>
                 <thead>
                     <tr>
-                        <th style="width: 14%;">제출일시</th>
-                        <th style="width: 13%;">부서</th>
-                        <th style="width: 14%;">직급/성명</th>
-                        <th style="width: 10%;">구분</th>
-                        <th>1.화재</th>
-                        <th>2.전원</th>
-                        <th>3.보안</th>
-                        <th>4.문단속</th>
+                        <th style="width: 15%;">제출일시</th>
+                        <th style="width: 15%;">부서</th>
+                        <th style="width: 15%;">직급</th>
+                        <th style="width: 15%;">성명</th>
                         <th>서명</th>
-                        <th>관리</th>
+                        <th style="width: 12%;">관리</th>
                     </tr>
                 </thead>
                 <tbody id="recordList"></tbody>
@@ -328,9 +326,13 @@
                         <input type="text" id="edit_userName">
                     </div>
                     <div class="full-width" style="margin-top:5px; border-top:1px dashed #ddd; padding-top:10px;">
-                        <label>서명 (확인 및 초기화)</label>
-                        <div class="edit-sig-box">
-                            <img id="edit_sigImg" class="edit-sig-img" src="">
+                        <label>서명 수정</label>
+                        <div class="edit-sig-container">
+                            <canvas id="editSignatureCanvas"></canvas>
+                        </div>
+                        <div class="edit-sig-tools">
+                            <span class="edit-sig-hint">서명을 다시 그리려면 아래 '지우기' 후 작성하세요.</span>
+                            <button type="button" class="btn btn-outline" style="padding:2px 8px; font-size:0.7rem;" id="btnEditSigClear">지우기</button>
                         </div>
                     </div>
                 </div>
@@ -359,19 +361,20 @@
 
             filtered.sort((a,b) => b.id - a.id).forEach(item => {
                 const tr = document.createElement('tr');
-                const getBadge = (key) => {
-                    const obj = item.items[key];
-                    if(!obj) return `<td>-</td>`;
-                    const cls = obj.value === '양호' ? 'badge-ok' : 'badge-no';
-                    return `<td><span class="badge ${cls}">${obj.value}</span></td>`;
-                };
+                
+                // 날짜 포맷팅: MM:DD HH:mm (24시간제)
+                const d = new Date(item.id);
+                const mm = String(d.getMonth() + 1).padStart(2, '0');
+                const dd = String(d.getDate()).padStart(2, '0');
+                const hh = String(d.getHours()).padStart(2, '0');
+                const min = String(d.getMinutes()).padStart(2, '0');
+                const formattedDate = `${mm}:${dd} ${hh}:${min}`;
 
                 tr.innerHTML = `
-                    <td>${item.submitTime}</td>
+                    <td>${formattedDate}</td>
                     <td>${item.department}</td>
-                    <td>${item.position} / ${item.userName}</td>
-                    <td><span class="badge badge-type">${item.checkerType || (item.items.item1?.type || '-')}</span></td>
-                    ${getBadge('item1')} ${getBadge('item2')} ${getBadge('item3')} ${getBadge('item4')}
+                    <td>${item.position}</td>
+                    <td>${item.userName}</td>
                     <td><img src="${item.signature}" class="sig-thumbnail" onclick="showSig('${item.signature}')"></td>
                     <td>
                         <button class="btn btn-outline" style="padding:4px 6px; font-size:0.7rem;" onclick="openEdit(${item.id})">수정</button>
@@ -389,6 +392,43 @@
             document.getElementById('modal').style.display = 'flex';
         }
 
+        let editDrawing = false;
+        let editHasSignature = false;
+        const editCanvas = document.getElementById('editSignatureCanvas');
+        const editCtx = editCanvas.getContext('2d');
+        const btnEditClear = document.getElementById('btnEditSigClear');
+
+        function initEditCanvas() {
+            const resize = () => {
+                const r = window.devicePixelRatio || 1;
+                const rect = editCanvas.getBoundingClientRect();
+                editCanvas.width = rect.width * r;
+                editCanvas.height = rect.height * r;
+                editCtx.scale(r, r);
+                editCtx.strokeStyle = "#333";
+                editCtx.lineWidth = 2;
+                editCtx.lineCap = "round";
+            };
+            resize();
+            const getPos = (e) => {
+                const rect = editCanvas.getBoundingClientRect();
+                const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+                const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+                return { x, y };
+            };
+            const start = (e) => { editDrawing = true; editCtx.beginPath(); const p = getPos(e); editCtx.moveTo(p.x, p.y); editHasSignature = true; };
+            const move = (e) => { if(!editDrawing) return; e.preventDefault(); const p = getPos(e); editCtx.lineTo(p.x, p.y); editCtx.stroke(); };
+            const stop = () => { editDrawing = false; };
+            
+            editCanvas.onmousedown = start; editCanvas.onmousemove = move; window.onmouseup = stop;
+            editCanvas.ontouchstart = start; editCanvas.ontouchmove = move; editCanvas.ontouchend = stop;
+            
+            btnEditClear.onclick = () => {
+                editCtx.clearRect(0,0,editCanvas.width,editCanvas.height);
+                editHasSignature = false;
+            };
+        }
+
         function openEdit(id) {
             currentId = id;
             const data = JSON.parse(localStorage.getItem('security_check_data') || '[]');
@@ -403,7 +443,16 @@
             document.getElementById('edit_checkerType').value = item.checkerType || (item.items.item1?.type || '최종퇴청자');
             document.getElementById('edit_position').value = item.position || '';
             document.getElementById('edit_userName').value = item.userName || '';
-            document.getElementById('edit_sigImg').src = item.signature || '';
+            
+            // 서명 캔버스 초기화
+            initEditCanvas();
+            const img = new Image();
+            img.src = item.signature;
+            img.onload = () => {
+                const rect = editCanvas.getBoundingClientRect();
+                editCtx.drawImage(img, 0, 0, rect.width, rect.height);
+                editHasSignature = true;
+            };
             
             const area = document.getElementById('editFormArea');
             area.innerHTML = '<label class="full-width" style="margin-bottom:5px;">점검 항목별 상태</label>';
@@ -429,6 +478,11 @@
             data[idx].checkerType = document.getElementById('edit_checkerType').value;
             data[idx].position = document.getElementById('edit_position').value;
             data[idx].userName = document.getElementById('edit_userName').value;
+            
+            // 수정된 서명이 있으면 업데이트
+            if (editHasSignature) {
+                data[idx].signature = editCanvas.toDataURL();
+            }
             
             for(let i=1; i<=4; i++){
                 data[idx].items[`item${i}`].value = document.getElementById(`edit_val_${i}`).value;
