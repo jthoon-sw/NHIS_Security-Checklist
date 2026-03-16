@@ -102,9 +102,9 @@
         }
 
         input[type="text"],
-        input[type="date"],
-        select {
+        input[type="date"] {
             width: 100%;
+            max-width: 50%;
             padding: 10px 12px;
             border: 1px solid var(--nhis-border);
             border-radius: var(--nhis-radius);
@@ -174,7 +174,7 @@
             padding-left: 15px;
             background-color: #fafafa;
             font-weight: 500;
-            width: 45%;
+            width: 65%;
         }
 
         /* Radio Group in Table */
@@ -427,28 +427,34 @@
 
             form.addEventListener('submit', (e) => {
                 e.preventDefault();
-                if(!hasSignature){ alert('미입력된 자료가 있습니다.'); return; }
                 
-                const checkerType = form.elements['checkerType'].value;
+                // 통합 검증 로직
+                const department = document.getElementById('department').value;
+                const position = document.getElementById('position').value;
+                const userName = document.getElementById('userName').value;
+                
                 const resultItems = {};
+                let itemsAllChecked = true;
                 for(let i=1; i<=4; i++){
                     const val = form.elements[`item${i}`].value;
-                    if(!val){ alert('미입력된 자료가 있습니다.'); return; }
+                    if(!val) { itemsAllChecked = false; break; }
                     resultItems[`item${i}`] = { value: val };
                 }
 
-                if(!document.getElementById('department').value || !document.getElementById('position').value || !document.getElementById('userName').value){
-                    alert('미입력된 자료가 있습니다.'); return;
+                if(!department || !position || !userName || !itemsAllChecked || !hasSignature){
+                    alert('미입력된 자료가 있습니다.');
+                    return;
                 }
-
+                
+                const checkerType = form.elements['checkerType'].value;
                 const now = new Date();
                 const submission = {
                     id: Date.now(),
                     submitTime: now.toLocaleString(),
                     checkDate: dateInput.value,
-                    department: document.getElementById('department').value,
-                    position: document.getElementById('position').value,
-                    userName: document.getElementById('userName').value,
+                    department,
+                    position,
+                    userName,
                     checkerType,
                     items: resultItems,
                     signature: canvas.toDataURL()
