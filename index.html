@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>국민건강보험 - 일일 보안점검표</title>
+    <title>국민건강보험 - 보안점검표</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
@@ -16,7 +16,7 @@
             --nhis-muted: #666666;
             --nhis-border: #d9d9d9;
             --white: #ffffff;
-            --nhis-radius: 4px; /* 공단 스타일은 둥근 모서리가 적음 */
+            --nhis-radius: 4px;
         }
 
         * {
@@ -33,74 +33,57 @@
             line-height: 1.6;
         }
 
-        /* NHIS Header Style */
+        /* NHIS Header Style: Left Logo, Center Title */
         .header-top {
             background-color: var(--white);
             border-bottom: 2px solid var(--nhis-red);
-            padding: 15px 20px;
-            display: flex;
-            justify-content: center;
+            padding: 10px 20px;
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
             align-items: center;
             box-shadow: 0 2px 4px rgba(0,0,0,0.05);
             position: sticky;
             top: 0;
             z-index: 100;
+            height: 70px;
         }
 
         .logo-area {
             display: flex;
             align-items: center;
-            gap: 10px;
         }
 
-        .logo-symbol {
-            width: 32px;
-            height: 32px;
-            background: var(--nhis-red);
-            border-radius: 50%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            color: white;
-            font-weight: bold;
-            font-size: 18px;
+        .logo-img {
+            height: 50px;
+            object-fit: contain;
         }
 
-        .logo-text {
-            font-size: 1.25rem;
+        .header-title {
+            grid-column: 2;
+            font-size: 1.4rem;
             font-weight: 700;
-            color: #333;
-            letter-spacing: -1px;
+            color: #111;
+            letter-spacing: -0.5px;
         }
 
         .main-content {
             max-width: 800px;
-            margin: 40px auto;
-            padding: 0 20px;
+            margin: 30px auto;
+            padding: 0 15px;
         }
 
         .form-card {
             background: var(--white);
             border: 1px solid var(--nhis-border);
-            padding: 40px;
+            padding: 30px;
             border-radius: var(--nhis-radius);
             box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-        }
-
-        .page-title {
-            font-size: 1.5rem;
-            font-weight: 700;
-            text-align: center;
-            margin-bottom: 30px;
-            color: var(--nhis-text);
-            border-bottom: 1px solid #eee;
-            padding-bottom: 15px;
         }
 
         .section-title {
             font-size: 1.1rem;
             font-weight: 700;
-            margin: 25px 0 15px;
+            margin: 20px 0 15px;
             color: var(--nhis-red);
             display: flex;
             align-items: center;
@@ -118,40 +101,46 @@
         .input-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 20px;
+            gap: 15px;
         }
 
         .input-group {
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
 
         label {
             display: block;
             font-weight: 500;
-            margin-bottom: 8px;
-            font-size: 0.9rem;
+            margin-bottom: 6px;
+            font-size: 0.85rem;
         }
 
         input[type="text"],
         input[type="date"],
         select {
             width: 100%;
-            padding: 12px 15px;
+            padding: 10px 12px;
             border: 1px solid var(--nhis-border);
             border-radius: var(--nhis-radius);
             font-family: inherit;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             outline: none;
             transition: border-color 0.2s;
+        }
+
+        /* Mobile Date Input Optimization */
+        input[type="date"] {
+            max-width: 100%;
+            font-size: 0.85rem;
         }
 
         input:focus, select:focus {
             border-color: var(--nhis-red);
         }
 
-        /* Table Style like NHIS documents */
+        /* Optimized Table with Dropdowns for Mobile */
         .table-wrapper {
-            margin: 20px 0;
+            margin: 15px 0;
             border-top: 2px solid #333;
             overflow-x: auto;
         }
@@ -162,10 +151,10 @@
         }
 
         th, td {
-            padding: 15px 10px;
+            padding: 12px 8px;
             border: 1px solid #efefef;
             text-align: center;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
         }
 
         th {
@@ -176,43 +165,28 @@
 
         td:first-child {
             text-align: left;
-            padding-left: 15px;
+            padding-left: 12px;
             background-color: #fafafa;
             font-weight: 500;
+            width: 40%;
         }
 
-        .radio-set {
+        .select-set {
             display: flex;
-            justify-content: center;
-            gap: 15px;
+            flex-direction: column;
+            gap: 8px;
         }
 
-        .radio-set label {
-            margin: 0;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            font-weight: 400;
+        .select-set select {
+            padding: 6px 8px;
+            font-size: 0.8rem;
         }
 
-        .radio-set input {
-            accent-color: var(--nhis-red);
-            width: 18px;
-            height: 18px;
-        }
-
-        .disabled-group {
-            opacity: 0.3;
-            pointer-events: none;
-        }
-
-        /* Signature Pad Stylized */
+        /* Signature Pad */
         .sig-container {
             border: 1px solid var(--nhis-border);
             background: #fff;
             margin-top: 10px;
-            position: relative;
         }
 
         #signatureCanvas {
@@ -226,7 +200,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 10px;
+            padding: 8px 10px;
             background: #fdfdfd;
             border-top: 1px solid #eee;
         }
@@ -235,24 +209,23 @@
             background: #666;
             color: white;
             border: none;
-            padding: 5px 12px;
+            padding: 4px 10px;
             border-radius: var(--nhis-radius);
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             cursor: pointer;
         }
 
-        /* Main Red Action Button */
         .btn-submit {
             width: 100%;
             background-color: var(--nhis-red);
             color: white;
             border: none;
-            padding: 18px;
+            padding: 16px;
             font-size: 1.1rem;
             font-weight: 700;
             border-radius: var(--nhis-radius);
             cursor: pointer;
-            margin-top: 30px;
+            margin-top: 25px;
             transition: background 0.2s;
         }
 
@@ -263,33 +236,42 @@
         .admin-nav {
             display: block;
             text-align: center;
-            margin-top: 25px;
+            margin-top: 20px;
             color: var(--nhis-muted);
             text-decoration: none;
-            font-size: 0.85rem;
+            font-size: 0.8rem;
         }
-        .admin-nav:hover { text-decoration: underline; color: var(--nhis-red); }
 
         @media (max-width: 600px) {
-            .form-card { padding: 25px; }
+            .header-top { 
+                grid-template-columns: auto 1fr;
+                height: 60px;
+                padding: 5px 15px;
+            }
+            .header-title { 
+                grid-column: 2;
+                font-size: 1.1rem;
+                justify-self: center;
+                margin-right: 40px; /* Symmetry adjustment for logo */
+            }
+            .logo-img { height: 35px; }
+            .form-card { padding: 20px; }
             .input-grid { grid-template-columns: 1fr; }
-            .header-top { padding: 10px; }
-            th, td { padding: 10px 5px; font-size: 0.8rem; }
+            th, td { padding: 8px 4px; font-size: 0.8rem; }
+            td:first-child { width: 35%; }
         }
     </style>
 </head>
 <body>
     <div class="header-top">
         <div class="logo-area">
-            <div class="logo-symbol">♥</div>
-            <div class="logo-text">국민건강보험 <span style="font-weight:300; font-size: 0.9em;">h-well</span></div>
+            <img src="logo.png" alt="인천경기지역본부 로고" class="logo-img">
         </div>
+        <div class="header-title">보안점검표</div>
     </div>
 
     <div class="main-content">
         <div class="form-card">
-            <h1 class="page-title">일일 보안점검표</h1>
-
             <form id="securityForm">
                 <div class="section-title">기본 정보 입력</div>
                 <div class="input-grid">
@@ -330,31 +312,78 @@
                     <table>
                         <thead>
                             <tr>
-                                <th style="width: 40%;">점검항목</th>
-                                <th>퇴청자 점검</th>
-                                <th>당직자 점검</th>
+                                <th>점검항목</th>
+                                <th>점검 결과 (선택)</th>
                             </tr>
                         </thead>
                         <tbody id="checkItems">
                             <tr data-row="1">
                                 <td>1. 화재 단속상태</td>
-                                <td><div class="radio-set" data-type="user"><label><input type="radio" name="item1_user" value="양호"> 양호</label><label><input type="radio" name="item1_user" value="불량"> 불량</label></div></td>
-                                <td><div class="radio-set" data-type="watcher"><label><input type="radio" name="item1_watcher" value="양호"> 양호</label><label><input type="radio" name="item1_watcher" value="불량"> 불량</label></div></td>
+                                <td>
+                                    <div class="select-set">
+                                        <select name="item1_type" required>
+                                            <option value="">점검자 선택</option>
+                                            <option value="퇴청자">퇴청자 점검</option>
+                                            <option value="당직자">당직자 점검</option>
+                                        </select>
+                                        <select name="item1_value" required>
+                                            <option value="">상태 선택</option>
+                                            <option value="양호">양호</option>
+                                            <option value="불량">불량</option>
+                                        </select>
+                                    </div>
+                                </td>
                             </tr>
                             <tr data-row="2">
                                 <td>2. 소등 및 각종 전원상태</td>
-                                <td><div class="radio-set" data-type="user"><label><input type="radio" name="item2_user" value="양호"> 양호</label><label><input type="radio" name="item2_user" value="불량"> 불량</label></div></td>
-                                <td><div class="radio-set" data-type="watcher"><label><input type="radio" name="item2_watcher" value="양호"> 양호</label><label><input type="radio" name="item2_watcher" value="불량"> 불량</label></div></td>
+                                <td>
+                                    <div class="select-set">
+                                        <select name="item2_type" required>
+                                            <option value="">점검자 선택</option>
+                                            <option value="퇴청자">퇴청자 점검</option>
+                                            <option value="당직자">당직자 점검</option>
+                                        </select>
+                                        <select name="item2_value" required>
+                                            <option value="">상태 선택</option>
+                                            <option value="양호">양호</option>
+                                            <option value="불량">불량</option>
+                                        </select>
+                                    </div>
+                                </td>
                             </tr>
                             <tr data-row="3">
                                 <td>3. 서류보관/잠금장치상태</td>
-                                <td><div class="radio-set" data-type="user"><label><input type="radio" name="item3_user" value="양호"> 양호</label><label><input type="radio" name="item3_user" value="불량"> 불량</label></div></td>
-                                <td><div class="radio-set" data-type="watcher"><label><input type="radio" name="item3_watcher" value="양호"> 양호</label><label><input type="radio" name="item3_watcher" value="불량"> 불량</label></div></td>
+                                <td>
+                                    <div class="select-set">
+                                        <select name="item3_type" required>
+                                            <option value="">점검자 선택</option>
+                                            <option value="퇴청자">퇴청자 점검</option>
+                                            <option value="당직자">당직자 점검</option>
+                                        </select>
+                                        <select name="item3_value" required>
+                                            <option value="">상태 선택</option>
+                                            <option value="양호">양호</option>
+                                            <option value="불량">불량</option>
+                                        </select>
+                                    </div>
+                                </td>
                             </tr>
                             <tr data-row="4">
                                 <td>4. 문단속 상태</td>
-                                <td><div class="radio-set" data-type="user"><label><input type="radio" name="item4_user" value="양호"> 양호</label><label><input type="radio" name="item4_user" value="불량"> 불량</label></div></td>
-                                <td><div class="radio-set" data-type="watcher"><label><input type="radio" name="item4_watcher" value="양호"> 양호</label><label><input type="radio" name="item4_watcher" value="불량"> 불량</label></div></td>
+                                <td>
+                                    <div class="select-set">
+                                        <select name="item4_type" required>
+                                            <option value="">점검자 선택</option>
+                                            <option value="퇴청자">퇴청자 점검</option>
+                                            <option value="당직자">당직자 점검</option>
+                                        </select>
+                                        <select name="item4_value" required>
+                                            <option value="">상태 선택</option>
+                                            <option value="양호">양호</option>
+                                            <option value="불량">불량</option>
+                                        </select>
+                                    </div>
+                                </td>
                             </tr>
                         </tbody>
                     </table>
@@ -364,14 +393,14 @@
                 <div class="sig-container">
                     <canvas id="signatureCanvas"></canvas>
                     <div class="sig-footer">
-                        <span style="font-size: 0.8rem; color: #888;">터치로 서명해 주세요.</span>
+                        <span style="font-size: 0.75rem; color: #888;">터치로 서명해 주세요.</span>
                         <button type="button" class="btn-clear" id="btnClearSignature">지우기</button>
                     </div>
                 </div>
 
                 <button type="submit" class="btn-submit">점검표 최종 제출하기</button>
             </form>
-            <a href="admin.html" class="admin-nav">공단 관리자 접속</a>
+            <a href="admin.html" class="admin-nav">관리자 페이지 접속</a>
         </div>
     </div>
 
@@ -386,24 +415,7 @@
             const today = new Date();
             dateInput.value = today.toISOString().slice(0, 10);
 
-            // Interaction logic (same functionality, NHIS styles)
-            const rows = document.querySelectorAll('#checkItems tr');
-            rows.forEach(row => {
-                const userRadios = row.querySelectorAll('[data-type="user"] input');
-                const watcherRadios = row.querySelectorAll('[data-type="watcher"] input');
-                const userGroup = row.querySelector('[data-type="user"]');
-                const watcherGroup = row.querySelector('[data-type="watcher"]');
-                const update = () => {
-                    const u = Array.from(userRadios).some(r => r.checked);
-                    const w = Array.from(watcherRadios).some(r => r.checked);
-                    watcherGroup.classList.toggle('disabled-group', u);
-                    userGroup.classList.toggle('disabled-group', w);
-                };
-                userRadios.forEach(r => r.addEventListener('change', update));
-                watcherRadios.forEach(r => r.addEventListener('change', update));
-            });
-
-            // Canvas drawing logic
+            // Signature Logic
             let isDrawing = false;
             let hasSignature = false;
             const resize = () => {
@@ -436,14 +448,15 @@
             form.addEventListener('submit', (e) => {
                 e.preventDefault();
                 if(!hasSignature){ alert('서명을 완료해 주세요.'); return; }
+                
                 const resultItems = {};
                 for(let i=1; i<=4; i++){
-                    const u = Array.from(document.getElementsByName(`item${i}_user`)).find(r => r.checked);
-                    const w = Array.from(document.getElementsByName(`item${i}_watcher`)).find(r => r.checked);
-                    if(u) resultItems[`item${i}`] = { type: '퇴청자', value: u.value };
-                    else if(w) resultItems[`item${i}`] = { type: '당직자', value: w.value };
-                    else { alert('모든 항목을 점검해 주세요.'); return; }
+                    const type = document.getElementsByName(`item${i}_type`)[0].value;
+                    const val = document.getElementsByName(`item${i}_value`)[0].value;
+                    if(!type || !val){ alert('모든 항목의 점검자 및 상태를 선택해 주세요.'); return; }
+                    resultItems[`item${i}`] = { type, value: val };
                 }
+
                 const now = new Date();
                 const submission = {
                     id: Date.now(),
