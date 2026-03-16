@@ -105,8 +105,8 @@
         input[type="text"],
         input[type="date"] {
             width: 100%;
-            max-width: 61%; /* 너비 61%로 정밀 조정 */
-            padding: 10px 12px;
+            max-width: 60%;
+            padding: 12px 15px;
             border: 1px solid var(--nhis-border);
             border-radius: var(--nhis-radius);
             font-family: inherit;
@@ -117,9 +117,13 @@
             color: var(--nhis-text);
         }
 
+        input::placeholder {
+            color: var(--nhis-muted);
+        }
+
         select {
             width: 100%;
-            max-width: 70%;
+            max-width: 60%;
             padding: 12px 15px;
             border: 1px solid var(--nhis-border);
             border-radius: var(--nhis-radius);
