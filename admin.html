@@ -633,8 +633,8 @@
 
                 <div class="edit-form">
                     <div class="full-width">
-                        <label>제출일시</label>
-                        <input type="text" id="edit_submitTime">
+                        <label>제출일시 (스크롤 선택)</label>
+                        <input type="datetime-local" id="edit_submitTime">
                     </div>
                     <div>
                         <label>층</label>
@@ -852,7 +852,14 @@
             document.getElementById('sigView').style.display = 'none';
             document.getElementById('editView').style.display = 'block';
 
-            document.getElementById('edit_submitTime').value = item.submitTime || '';
+            // 제출일시 포맷팅 (YYYY-MM-DDTHH:mm)
+            const dateObj = new Date(item.id);
+            const yyyy = dateObj.getFullYear();
+            const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+            const dd = String(dateObj.getDate()).padStart(2, '0');
+            const hh = String(dateObj.getHours()).padStart(2, '0');
+            const min = String(dateObj.getMinutes()).padStart(2, '0');
+            document.getElementById('edit_submitTime').value = `${yyyy}-${mm}-${dd}T${hh}:${min}`;
             document.getElementById('edit_department').value = item.department || '';
             document.getElementById('edit_checkerType').value = item.checkerType || (item.items.item1?.type || '최종퇴청자');
             document.getElementById('edit_position').value = item.position || '';
