@@ -919,17 +919,42 @@
                 // [추가] 중복 데이터 확인 (구글 드라이브 연동 시)
                 if (GAS_URL && !GAS_URL.includes('YOUR_GAS_WEB_APP_URL_HERE')) {
                     try {
-                        const checkResp = await fetch(GAS_URL);
+                        const checkResp = await fetch(`${GAS_URL}?t=${Date.now()}`); 
                         const allData = await checkResp.json();
-                        const existing = allData.find(i => i.checkDate === submission.checkDate && i.department === submission.department);
+                        
+                        // 날짜 및 부서 매칭 (공백 제거 및 시간대 보정)
+                        const existing = allData.find(i => {
+                            if (!i.checkDate || !i.department) return false;
+                            
+                            // 부서명 비교 (공백 제거)
+                            const sheetDept = String(i.department).replace(/\s/g, '');
+                            const currentDept = submission.department.replace(/\s/g, '');
+                            if (sheetDept !== currentDept) return false;
+
+                            // 날짜 비교 (로컬 시간 기준)
+                            let itemDateStr = String(i.checkDate).trim();
+                            let sheetDateFormatted = "";
+                            if (itemDateStr.includes('T') || itemDateStr.includes('Z')) {
+                                try {
+                                    const dObj = new Date(itemDateStr);
+                                    if (!isNaN(dObj.getTime())) {
+                                        sheetDateFormatted = `${dObj.getFullYear()}-${String(dObj.getMonth() + 1).padStart(2, '0')}-${String(dObj.getDate()).padStart(2, '0')}`;
+                                    }
+                                } catch(e) {}
+                            }
+                            if (!sheetDateFormatted) {
+                                let temp = itemDateStr.split('T')[0].split(' ')[0].replace(/\. /g, '-').replace(/\./g, '-').replace(/\//g, '-').replace(/ /g, '-');
+                                if (temp.endsWith('-')) temp = temp.slice(0, -1);
+                                const parts = temp.split('-');
+                                if (parts.length === 3) {
+                                    sheetDateFormatted = `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+                                } else sheetDateFormatted = temp;
+                            }
+                            return sheetDateFormatted === submission.checkDate;
+                        });
                         
                         if (existing) {
-                            const d = new Date(existing.id);
-                            const hh = String(d.getHours()).padStart(2, '0');
-                            const min = String(d.getMinutes()).padStart(2, '0');
-                            const confirmMsg = `${submission.department}은(는) 이미 ${hh}:${min}에 제출된 내역이 있습니다.\n기존 자료를 새로운 자료로 덮어씌우시겠습니까?`;
-                            
-                            if (!confirm(confirmMsg)) {
+                            if (!confirm("이전 점검자료가 있습니다. 덮어씌우시겠습니까?")) {
                                 submitBtn.disabled = false;
                                 submitBtn.innerText = originalText;
                                 return;

@@ -801,12 +801,19 @@
                 if (item) {
                     tr.onclick = () => showRecordActions(item);
 
-                    const d = new Date(item.id);
-                    const month = d.getMonth() + 1;
-                    const date = d.getDate();
-                    const hh = String(d.getHours()).padStart(2, '0');
-                    const min = String(d.getMinutes()).padStart(2, '0');
-                    const formattedDate = `${month}/${date} ${hh}:${min}`;
+                    // 제출일시 표시 (Number 변환으로 안정성 확보)
+                    const d = new Date(Number(item.id));
+                    let formattedDate = "";
+                    if (!isNaN(d.getTime())) {
+                        const month = d.getMonth() + 1;
+                        const date = d.getDate();
+                        const hh = String(d.getHours()).padStart(2, '0');
+                        const min = String(d.getMinutes()).padStart(2, '0');
+                        formattedDate = `${month}/${date} ${hh}:${min}`;
+                    } else {
+                        // 변환 실패 시 submitTime 문자열 그대로 또는 일부 추출
+                        formattedDate = String(item.submitTime || '-').split('오후')[0].split('오전')[0].trim();
+                    }
 
                     tr.innerHTML = `
                         <td>${formattedDate}</td>
