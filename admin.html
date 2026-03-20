@@ -536,19 +536,9 @@
     <div class="container">
         <div class="stats-bar">
             <div class="filter-group">
-                <label style="font-weight:700; font-size:0.9rem;">층 필터:</label>
-                <select id="deptSelector" onchange="renderRecords()">
-                    <option value="전체">전체 층</option>
-                    <option value="1층">1층</option>
-                    <option value="2층">2층</option>
-                    <option value="3층">3층</option>
-                    <option value="4층">4층</option>
-                    <option value="5층">5층</option>
-                    <option value="6층">6층</option>
-                    <option value="7층">7층</option>
-                    <option value="8층">8층</option>
-                    <option value="별관2층">별관2층</option>
-                </select>
+                <label style="font-weight:700; font-size:0.9rem;">점검 날짜 선택:</label>
+                <input type="date" id="dateSelector" onchange="renderRecords()" style="padding:5px; border:1px solid #ddd; border-radius:4px;">
+            </div>
             </div>
             <div id="statusCount" style="font-weight:700; color:var(--nhis-red); font-size:0.9rem;">기록: 0건</div>
         </div>
@@ -568,19 +558,6 @@
             </table>
         </div>
 
-        <div class="storage-monitor">
-            <div class="storage-header">
-                <span>데이터 저장소 사용 현황</span>
-                <span id="storagePercent">0%</span>
-            </div>
-            <div class="progress-container">
-                <div id="storageBar" class="progress-bar"></div>
-            </div>
-            <div class="storage-info">
-                <span>현재 사용량: <span id="usedStorage">0 GB</span></span>
-                <span id="totalLimitText">전체 용량: 15 GB</span>
-            </div>
-        </div>
 
         <!-- Official Form View (Hidden by default, used for export) -->
         <div id="officialFormArea">
@@ -725,25 +702,25 @@
 
     <script>
         // Google Apps Script 웹 앱 URL을 여기에 입력하세요 (index.html과 동일한 URL).
-        const GAS_URL = 'https://script.google.com/macros/s/AKfycbz_o_uTZ-LXYRPQgfxu2aueF3BKyuHy0eKFj-8Ql-g7scTpmw5V3dMETYLvyAXnPPLeSA/exec';
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbxolqZH5IxC7iyY6BzvfgdnksFZUYUaQzzOF_Pih01g9IF-LEuXSLvGSwrWm93utuJ0/exec';
+        const FLOORS = ['1층', '2층', '3층', '4층', '5층', '6층', '7층', '8층', '별관2층'];
         let currentId = null;
         let cachedData = []; // 구글 드라이브에서 불러온 데이터 캐시
 
         async function renderRecords() {
             let data = [];
-            const filter = document.getElementById('deptSelector').value;
+            const selectedDate = document.getElementById('dateSelector').value;
             const list = document.getElementById('recordList');
 
-            // GAS URL이 설정되어 있으면 실시간 조회, 아니면 로컬 스토리지 사용
             if (GAS_URL && !GAS_URL.includes('YOUR_GAS_WEB_APP_URL_HERE')) {
                 if (cachedData.length === 0) {
-                    list.innerHTML = '<tr><td colspan="6" style="padding:40px;">데이터를 불러오는 중입니다...</td></tr>';
+                    list.innerHTML = '<tr><td colspan="5" style="padding:40px;">데이터를 불러오는 중입니다...</td></tr>';
                     try {
                         const response = await fetch(GAS_URL);
                         cachedData = await response.json();
                     } catch (err) {
                         console.error('Fetch error:', err);
-                        list.innerHTML = '<tr><td colspan="6" style="padding:40px; color:red;">구글 데이터를 불러오지 못했습니다. 로컬 데이터를 대신 표시합니다.</td></tr>';
+                        list.innerHTML = '<tr><td colspan="5" style="padding:40px; color:red;">구글 데이터를 불러오지 못했습니다. 로컬 데이터를 대신 표시합니다.</td></tr>';
                         cachedData = JSON.parse(localStorage.getItem('security_check_data') || '[]');
                     }
                 }
@@ -752,30 +729,42 @@
                 data = JSON.parse(localStorage.getItem('security_check_data') || '[]');
             }
 
-            const filtered = filter === '전체' ? data : data.filter(i => i.department === filter);
-
-            document.getElementById('statusCount').innerText = `총 ${filtered.length}건의 기록`;
+            // 선택된 날짜의 데이터만 필터링
+            const filtered = data.filter(i => i.checkDate === selectedDate);
+            document.getElementById('statusCount').innerText = `${selectedDate} 점검 현황`;
             list.innerHTML = '';
 
-            filtered.sort((a, b) => b.id - a.id).forEach(item => {
+            // 모든 층을 순회하며 표시
+            FLOORS.forEach(floor => {
                 const tr = document.createElement('tr');
+                const item = filtered.find(i => i.department === floor);
 
-                // 날짜 포맷팅: M/D HH:mm
-                const d = new Date(item.id);
-                const month = d.getMonth() + 1;
-                const date = d.getDate();
-                const hh = String(d.getHours()).padStart(2, '0');
-                const min = String(d.getMinutes()).padStart(2, '0');
-                const formattedDate = `${month}/${date} ${hh}:${min}`;
+                if (item) {
+                    tr.onclick = () => showRecordActions(item);
+                    
+                    const d = new Date(item.id);
+                    const month = d.getMonth() + 1;
+                    const date = d.getDate();
+                    const hh = String(d.getHours()).padStart(2, '0');
+                    const min = String(d.getMinutes()).padStart(2, '0');
+                    const formattedDate = `${month}/${date} ${hh}:${min}`;
 
-                tr.onclick = () => showRecordActions(item);
-                tr.innerHTML = `
-                    <td>${formattedDate}</td>
-                    <td>${item.department}</td>
-                    <td>${item.position}</td>
-                    <td>${item.userName}</td>
-                    <td><img src="${item.signature}" class="sig-thumbnail"></td>
-                `;
+                    tr.innerHTML = `
+                        <td>${formattedDate}</td>
+                        <td style="font-weight:bold; color:var(--nhis-blue);">${floor}</td>
+                        <td>${item.position}</td>
+                        <td>${item.userName}</td>
+                        <td><img src="${item.signature}" class="sig-thumbnail"></td>
+                    `;
+                } else {
+                    tr.style.backgroundColor = '#f9f9f9';
+                    tr.style.cursor = 'default';
+                    tr.innerHTML = `
+                        <td style="color:#ccc;">-</td>
+                        <td style="font-weight:bold; color:#777;">${floor}</td>
+                        <td colspan="3" style="color:var(--nhis-red); font-weight:bold;">미점검</td>
+                    `;
+                }
                 list.appendChild(tr);
             });
         }
@@ -1100,88 +1089,27 @@
             }
         }
 
-        async function updateStorageInfo() {
-            // 기본 헤더 텍스트 변경
-            const storageHeader = document.querySelector('.storage-header span:first-child');
+   
 
-            if (GAS_URL && !GAS_URL.includes('YOUR_GAS_WEB_APP_URL_HERE')) {
-                storageHeader.innerText = '데이터 저장소 사용 현황';
-                try {
-                    // 캐시 방지를 위해 타임스탬프 추가
-                    const response = await fetch(`${GAS_URL}?action=getStorage&t=${Date.now()}`);
-                    const info = await response.json();
 
-                    // 단위를 유연하게 결정 (1GB 미만이면 MB로 표시)
-                    let usedDisplay;
-                    const usedMB = (info.used / (1024 ** 2)).toFixed(2);
-                    const usedGB = (info.used / (1024 ** 3)).toFixed(2);
 
-                    if (info.used < (1024 ** 3)) {
-                        usedDisplay = `${usedMB} MB`;
-                    } else {
-                        usedDisplay = `${usedGB} GB`;
-                    }
-
-                    const limitGB = (info.limit / (1024 ** 3)).toFixed(0);
-                    const percent = ((info.used / info.limit) * 100).toFixed(2); // 소수점 둘째자리까지 표시
-
-                    document.getElementById('usedStorage').innerText = usedDisplay;
-                    document.getElementById('storagePercent').innerText = `${percent}%`;
-                    document.getElementById('storageBar').style.width = `${percent}%`;
-                    document.getElementById('totalLimitText').innerText = `전체 용량: ${limitGB} GB`;
-
-                    if (percent >= 80) {
-                        document.getElementById('storageBar').style.backgroundColor = 'var(--nhis-red)';
-                    } else {
-                        document.getElementById('storageBar').style.backgroundColor = 'var(--nhis-blue)';
-                    }
-                } catch (err) {
-                    console.error('Storage info error:', err);
-                }
-            } else {
-                storageHeader.innerText = '로컬 저장소 사용 현황';
-                let total = 0;
-                for (let x in localStorage) {
-                    if (localStorage.hasOwnProperty(x)) {
-                        total += (localStorage[x].length + x.length) * 2;
-                    }
-                }
-
-                const limit = 5 * 1024 * 1024; // 5MB
-                const usedKB = (total / 1024).toFixed(2);
-                const percent = Math.min((total / limit) * 100, 100).toFixed(1);
-
-                document.getElementById('usedStorage').innerText = `${usedKB} KB`;
-                document.getElementById('storagePercent').innerText = `${percent}%`;
-                document.getElementById('storageBar').style.width = `${percent}%`;
-                document.getElementById('totalLimitText').innerText = `전체 용량: 5,120 KB (Local)`;
-
-                if (percent >= 80) {
-                    document.getElementById('storageBar').style.backgroundColor = 'var(--nhis-red)';
-                } else {
-                    document.getElementById('storageBar').style.backgroundColor = 'var(--nhis-blue)';
-                }
-            }
-        }
 
         window.onload = () => {
+            // 날짜 필터 초기값을 오늘로 설정
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            document.getElementById('dateSelector').value = `${yyyy}-${mm}-${dd}`;
+            
             renderRecords();
-            updateStorageInfo();
             initModalCanvas();
-        };
-
-        // 데이터 저장 시에도 업데이트
-        const originalSetItem = localStorage.setItem;
-        localStorage.setItem = function () {
-            originalSetItem.apply(this, arguments);
-            updateStorageInfo();
         };
 
         // 타 탭에서의 변경 사항 실시간 반영
         window.addEventListener('storage', (e) => {
             if (e.key === 'security_check_data') {
                 renderRecords();
-                updateStorageInfo();
             }
         });
     </script>
