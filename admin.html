@@ -177,7 +177,15 @@
         .sig-thumbnail {
             max-height: 35px;
             border: 1px solid #ddd;
+        }
+
+        #recordList tr {
             cursor: pointer;
+            transition: background 0.1s;
+        }
+
+        #recordList tr:hover {
+            background-color: #fff9f9 !important;
         }
 
         #modal {
@@ -550,11 +558,10 @@
                 <thead>
                     <tr>
                         <th style="width: 15%;">제출일시</th>
-                        <th style="width: 15%;">부서</th>
+                        <th style="width: 15%;">층</th>
                         <th style="width: 15%;">직급</th>
                         <th style="width: 15%;">성명</th>
                         <th>서명</th>
-                        <th style="width: 12%;">관리</th>
                     </tr>
                 </thead>
                 <tbody id="recordList"></tbody>
@@ -622,7 +629,15 @@
     <div id="modal" onclick="this.style.display='none'">
         <div class="modal-body" onclick="event.stopPropagation()">
             <span class="close-btn" onclick="document.getElementById('modal').style.display='none'">&times;</span>
-            <div id="sigView">
+            <div id="actionView" style="display:none; text-align:center;">
+                <h3 style="margin-bottom:20px; font-size:1.1rem; color:var(--nhis-red);">점검 기록 관리</h3>
+                <div style="display:flex; flex-direction:column; gap:12px;">
+                    <button class="btn btn-outline" style="padding:15px;" onclick="showSigFromAction()">서명 확대 보기</button>
+                    <button class="btn btn-red" style="padding:15px;" onclick="openEditFromAction()">데이터 수정하기</button>
+                    <button class="btn btn-gray" style="padding:15px;" onclick="delFromAction()">기록 삭제하기</button>
+                </div>
+            </div>
+            <div id="sigView" style="display:none;">
                 <h3 style="margin-bottom:15px; font-size:1rem;">자필 서명 확대</h3>
                 <img id="sigLarge" src="" style="width:100%; border:1px solid #eee;">
             </div>
@@ -745,30 +760,51 @@
             filtered.sort((a, b) => b.id - a.id).forEach(item => {
                 const tr = document.createElement('tr');
 
-                // 날짜 포맷팅: MM:DD HH:mm (24시간제)
+                // 날짜 포맷팅: M/D HH:mm
                 const d = new Date(item.id);
-                const mm = String(d.getMonth() + 1).padStart(2, '0');
-                const dd = String(d.getDate()).padStart(2, '0');
+                const month = d.getMonth() + 1;
+                const date = d.getDate();
                 const hh = String(d.getHours()).padStart(2, '0');
                 const min = String(d.getMinutes()).padStart(2, '0');
-                const formattedDate = `${mm}:${dd} ${hh}:${min}`;
+                const formattedDate = `${month}/${date} ${hh}:${min}`;
 
+                tr.onclick = () => showRecordActions(item);
                 tr.innerHTML = `
                     <td>${formattedDate}</td>
                     <td>${item.department}</td>
                     <td>${item.position}</td>
                     <td>${item.userName}</td>
-                    <td><img src="${item.signature}" class="sig-thumbnail" onclick="showSig('${item.signature}')"></td>
-                    <td>
-                        <button class="btn btn-outline" style="padding:4px 6px; font-size:0.7rem;" onclick="openEdit(${item.id})">수정</button>
-                        <button class="btn btn-gray" style="padding:4px 6px; font-size:0.7rem; margin-top:4px;" onclick="del(${item.id})">삭제</button>
-                    </td>
+                    <td><img src="${item.signature}" class="sig-thumbnail"></td>
                 `;
                 list.appendChild(tr);
             });
         }
 
+        let currentItem = null;
+
+        function showRecordActions(item) {
+            currentItem = item;
+            document.getElementById('actionView').style.display = 'block';
+            document.getElementById('sigView').style.display = 'none';
+            document.getElementById('editView').style.display = 'none';
+            document.getElementById('modal').style.display = 'flex';
+        }
+
+        function showSigFromAction() {
+            showSig(currentItem.signature);
+        }
+
+        function openEditFromAction() {
+            openEdit(currentItem.id);
+        }
+
+        async function delFromAction() {
+            await del(currentItem.id);
+            document.getElementById('modal').style.display = 'none';
+        }
+
         function showSig(src) {
+            document.getElementById('actionView').style.display = 'none';
             document.getElementById('sigView').style.display = 'block';
             document.getElementById('editView').style.display = 'none';
             document.getElementById('sigLarge').src = src;
@@ -871,6 +907,7 @@
             const data = JSON.parse(localStorage.getItem('security_check_data') || '[]');
             const item = data.find(i => i.id === id);
 
+            document.getElementById('actionView').style.display = 'none';
             document.getElementById('sigView').style.display = 'none';
             document.getElementById('editView').style.display = 'block';
 
