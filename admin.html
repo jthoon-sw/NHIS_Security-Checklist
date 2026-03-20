@@ -542,8 +542,6 @@
                         style="padding:5px; border:1px solid #ddd; border-radius:4px;">
                     <button onclick="renderRecords(true)" class="btn btn-outline"
                         style="padding:5px 10px; font-size:0.8rem;">새로고침</button>
-                    <button onclick="toggleRawData()" class="btn btn-outline"
-                        style="padding:5px 10px; font-size:0.8rem; color:#666; border-style:dashed;">데이터진단</button>
                 </div>
             </div>
         </div>
@@ -715,18 +713,6 @@
         const FLOORS = ['1층', '2층', '3층', '4층', '5층', '6층', '7층', '8층', '별관2층'];
         let currentId = null;
         let cachedData = []; // 구글 드라이브에서 불러온 데이터 캐시
-
-        // 연동 데이터 진단용 함수
-        function toggleRawData() {
-            const area = document.getElementById('debugArea');
-            if (!area) return;
-            area.style.display = area.style.display === 'none' ? 'block' : 'none';
-            if (area.style.display === 'block') {
-                const out = document.getElementById('debugOutput');
-                out.innerHTML = `<p style="color:blue; font-weight:bold;">[가져온 원본 데이터 목록]</p>`;
-                out.innerHTML += `<pre style="background:#eee; padding:10px; border-radius:4px; margin-top:10px;">${JSON.stringify(cachedData, null, 2)}</pre>`;
-            }
-        }
 
         async function renderRecords(forceRefresh = false) {
             let data = [];
@@ -1186,12 +1172,6 @@
             }
         });
     </script>
-    <!-- Debug Area (진단용 - 버튼 클릭 시 노출) -->
-    <div id="debugArea" style="display:none; background:#fff; padding:20px; border:2px solid var(--nhis-blue); border-radius:8px; margin:20px;">
-        <h3 style="margin-bottom:10px; color:var(--nhis-blue);">데이터 연동 진단 패널</h3>
-        <p style="font-size:0.85rem; color:#666; margin-bottom:15px;">이 패널은 구글 시트에서 실제로 어떤 값이 넘어오고 있는지 보여줍니다. '미점검' 에러 해결을 위한 진단 도구입니다.</p>
-        <div id="debugOutput" style="font-family:monospace; font-size:0.8rem; overflow:auto; max-height:400px; line-height:1.4;"></div>
-    </div>
 </body>
 
 </html>
