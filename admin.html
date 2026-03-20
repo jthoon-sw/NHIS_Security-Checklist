@@ -571,7 +571,7 @@
             </div>
             <div class="storage-info">
                 <span>현재 사용량: <span id="usedStorage">0 KB</span></span>
-                <span>전체 용량: 5,120 KB (5 MB)</span>
+                <span id="totalLimitText">전체 용량: 5,120 KB (5 MB)</span>
             </div>
         </div>
 
@@ -927,10 +927,32 @@
             renderRecords();
         }
 
-        function del(id) {
-            if (!confirm('정말로 삭제하시겠습니까?')) return;
+        async function del(id) {
+            if (!confirm('구글 드라이브에서도 삭제됩니다. 정말로 삭제하시겠습니까?')) return;
+            
+            // 로컬 스토리지 삭제
             const data = JSON.parse(localStorage.getItem('security_check_data') || '[]');
             localStorage.setItem('security_check_data', JSON.stringify(data.filter(i => i.id !== id)));
+            
+            // 구글 드라이브 삭제 전송
+            if (GAS_URL && !GAS_URL.includes('YOUR_GAS_WEB_APP_URL_HERE')) {
+                try {
+                    // mode: 'no-cors'를 쓰면 성공 여부를 알 순 없지만 전송은 됨. 
+                    // 하지만 삭제 확인을 위해 일반 fetch 고려 (CORS 설정 필수)
+                    await fetch(GAS_URL, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'delete', id: id })
+                    });
+                    // 캐시 업데이트
+                    cachedData = cachedData.filter(i => i.id !== id);
+                } catch (err) {
+                    console.error('Delete error:', err);
+                    alert('구글 드라이브 삭제 요청 중 오류가 발생했습니다.');
+                }
+            }
+            
             renderRecords();
             updateStorageInfo();
         }
@@ -1040,27 +1062,57 @@
             }
         }
 
-        function updateStorageInfo() {
-            let total = 0;
-            for (let x in localStorage) {
-                if (localStorage.hasOwnProperty(x)) {
-                    total += (localStorage[x].length + x.length) * 2; // Approximate bytes (UTF-16)
+        async function updateStorageInfo() {
+            // 기본 헤더 텍스트 변경
+            const storageHeader = document.querySelector('.storage-header span:first-child');
+            
+            if (GAS_URL && !GAS_URL.includes('YOUR_GAS_WEB_APP_URL_HERE')) {
+                storageHeader.innerText = '구글 드라이브 사용 현황';
+                try {
+                    const response = await fetch(`${GAS_URL}?action=getStorage`);
+                    const info = await response.json();
+                    
+                    // Byte를 GB 단위로 변환
+                    const usedGB = (info.used / (1024 ** 3)).toFixed(2);
+                    const limitGB = (info.limit / (1024 ** 3)).toFixed(0);
+                    const percent = ((info.used / info.limit) * 100).toFixed(1);
+
+                    document.getElementById('usedStorage').innerText = `${usedGB} GB`;
+                    document.getElementById('storagePercent').innerText = `${percent}%`;
+                    document.getElementById('storageBar').style.width = `${percent}%`;
+                    document.getElementById('totalLimitText').innerText = `전체 용량: ${limitGB} GB`;
+
+                    if (percent >= 80) {
+                        document.getElementById('storageBar').style.backgroundColor = 'var(--nhis-red)';
+                    } else {
+                        document.getElementById('storageBar').style.backgroundColor = 'var(--nhis-blue)';
+                    }
+                } catch (err) {
+                    console.error('Storage info error:', err);
                 }
-            }
-
-            const limit = 5 * 1024 * 1024; // 5MB
-            const usedKB = (total / 1024).toFixed(2);
-            const percent = Math.min((total / limit) * 100, 100).toFixed(1);
-
-            document.getElementById('usedStorage').innerText = `${usedKB} KB`;
-            document.getElementById('storagePercent').innerText = `${percent}%`;
-            document.getElementById('storageBar').style.width = `${percent}%`;
-
-            // 용량이 80% 이상차면 색상을 빨간색으로 변경
-            if (percent >= 80) {
-                document.getElementById('storageBar').style.backgroundColor = 'var(--nhis-red)';
             } else {
-                document.getElementById('storageBar').style.backgroundColor = 'var(--nhis-blue)';
+                storageHeader.innerText = '로컬 저장소 사용 현황';
+                let total = 0;
+                for (let x in localStorage) {
+                    if (localStorage.hasOwnProperty(x)) {
+                        total += (localStorage[x].length + x.length) * 2;
+                    }
+                }
+
+                const limit = 5 * 1024 * 1024; // 5MB
+                const usedKB = (total / 1024).toFixed(2);
+                const percent = Math.min((total / limit) * 100, 100).toFixed(1);
+
+                document.getElementById('usedStorage').innerText = `${usedKB} KB`;
+                document.getElementById('storagePercent').innerText = `${percent}%`;
+                document.getElementById('storageBar').style.width = `${percent}%`;
+                document.getElementById('totalLimitText').innerText = `전체 용량: 5,120 KB (Local)`;
+
+                if (percent >= 80) {
+                    document.getElementById('storageBar').style.backgroundColor = 'var(--nhis-red)';
+                } else {
+                    document.getElementById('storageBar').style.backgroundColor = 'var(--nhis-blue)';
+                }
             }
         }
 
