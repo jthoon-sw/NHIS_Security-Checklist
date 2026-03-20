@@ -537,70 +537,75 @@
         <div class="stats-bar">
             <div class="filter-group">
                 <label style="font-weight:700; font-size:0.9rem;">점검 날짜 선택:</label>
-                <input type="date" id="dateSelector" onchange="renderRecords()" style="padding:5px; border:1px solid #ddd; border-radius:4px;">
+                <div style="display:flex; gap:5px; align-items:center;">
+                    <input type="date" id="dateSelector" onchange="renderRecords(true)"
+                        style="padding:5px; border:1px solid #ddd; border-radius:4px;">
+                    <button onclick="renderRecords(true)" class="btn btn-outline"
+                        style="padding:5px 10px; font-size:0.8rem;">새로고침</button>
+                </div>
             </div>
-            </div>
-            <div id="statusCount" style="font-weight:700; color:var(--nhis-red); font-size:0.9rem;">기록: 0건</div>
         </div>
+        <div id="statusCount" style="font-weight:700; color:var(--nhis-red); font-size:0.9rem;">조회중...</div>
+    </div>
 
-        <div class="table-area">
-            <table>
-                <thead>
-                    <tr>
-                        <th style="width: 15%;">제출일시</th>
-                        <th style="width: 15%;">층</th>
-                        <th style="width: 15%;">직급</th>
-                        <th style="width: 15%;">성명</th>
-                        <th>서명</th>
-                    </tr>
-                </thead>
-                <tbody id="recordList"></tbody>
-            </table>
-        </div>
+    <div class="table-area">
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 20%;">제출일시</th>
+                    <th style="width: 20%;">층</th>
+                    <th style="width: 20%;">직급</th>
+                    <th style="width: 20%;">성명</th>
+                    <th style="width: 20%;">서명</th>
+                </tr>
+            </thead>
+            <tbody id="recordList"></tbody>
+        </table>
+    </div>
 
 
-        <!-- Official Form View (Hidden by default, used for export) -->
-        <div id="officialFormArea">
-            <table class="official-table">
-                <thead>
-                    <tr>
-                        <th rowspan="2" class="diagonal-cell">
-                            <div class="diag-line"></div>
-                            <span class="diag-text-top">월</span>
-                            <span class="diag-text-bottom">일</span>
-                        </th>
-                        <th colspan="2">화재 단속<br>상태</th>
-                        <th colspan="2">소등 및 각종<br>전원 상태</th>
-                        <th colspan="2">서류보관<br>/잠금장치 상태</th>
-                        <th colspan="2">문단속<br>상태</th>
-                        <th rowspan="2" style="width:30px;">비고</th>
-                        <th colspan="3">최종퇴청자</th>
-                        <th colspan="3">당직근무자</th>
-                        <th colspan="3">결 재</th>
-                    </tr>
-                    <tr>
-                        <th>최종<br>퇴청자</th>
-                        <th>당직<br>근무자</th>
-                        <th>최종<br>퇴청자</th>
-                        <th>당직<br>근무자</th>
-                        <th>최종<br>퇴청자</th>
-                        <th>당직<br>근무자</th>
-                        <th>최종<br>퇴청자</th>
-                        <th>당직<br>근무자</th>
-                        <th>직급</th>
-                        <th>성명</th>
-                        <th>점검시간</th>
-                        <th>직급</th>
-                        <th>성명</th>
-                        <th>점검시간</th>
-                        <th>담당</th>
-                        <th>팀장</th>
-                        <th>부장</th>
-                    </tr>
-                </thead>
-                <tbody id="officialBody"></tbody>
-            </table>
-        </div>
+    <!-- Official Form View (Hidden by default, used for export) -->
+    <div id="officialFormArea">
+        <table class="official-table">
+            <thead>
+                <tr>
+                    <th rowspan="2" class="diagonal-cell">
+                        <div class="diag-line"></div>
+                        <span class="diag-text-top">월</span>
+                        <span class="diag-text-bottom">일</span>
+                    </th>
+                    <th colspan="2">화재 단속<br>상태</th>
+                    <th colspan="2">소등 및 각종<br>전원 상태</th>
+                    <th colspan="2">서류보관<br>/잠금장치 상태</th>
+                    <th colspan="2">문단속<br>상태</th>
+                    <th rowspan="2" style="width:30px;">비고</th>
+                    <th colspan="3">최종퇴청자</th>
+                    <th colspan="3">당직근무자</th>
+                    <th colspan="3">결 재</th>
+                </tr>
+                <tr>
+                    <th>최종<br>퇴청자</th>
+                    <th>당직<br>근무자</th>
+                    <th>최종<br>퇴청자</th>
+                    <th>당직<br>근무자</th>
+                    <th>최종<br>퇴청자</th>
+                    <th>당직<br>근무자</th>
+                    <th>최종<br>퇴청자</th>
+                    <th>당직<br>근무자</th>
+                    <th>직급</th>
+                    <th>성명</th>
+                    <th>점검시간</th>
+                    <th>직급</th>
+                    <th>성명</th>
+                    <th>점검시간</th>
+                    <th>담당</th>
+                    <th>팀장</th>
+                    <th>부장</th>
+                </tr>
+            </thead>
+            <tbody id="officialBody"></tbody>
+        </table>
+    </div>
     </div>
 
     <div id="modal" onclick="this.style.display='none'">
@@ -609,7 +614,8 @@
             <div id="actionView" style="display:none; text-align:center;">
                 <h3 style="margin-bottom:20px; font-size:1.1rem; color:var(--nhis-red);">점검 기록 관리</h3>
                 <div style="display:flex; flex-direction:column; gap:12px;">
-                    <button class="btn btn-outline" style="padding:15px;" onclick="showSigFromAction()">서명 확대 보기</button>
+                    <button class="btn btn-outline" style="padding:15px;" onclick="showSigFromAction()">서명 확대
+                        보기</button>
                     <button class="btn btn-red" style="padding:15px;" onclick="openEditFromAction()">데이터 수정하기</button>
                     <button class="btn btn-gray" style="padding:15px;" onclick="delFromAction()">기록 삭제하기</button>
                 </div>
@@ -707,20 +713,22 @@
         let currentId = null;
         let cachedData = []; // 구글 드라이브에서 불러온 데이터 캐시
 
-        async function renderRecords() {
+        async function renderRecords(forceRefresh = false) {
             let data = [];
             const selectedDate = document.getElementById('dateSelector').value;
             const list = document.getElementById('recordList');
 
             if (GAS_URL && !GAS_URL.includes('YOUR_GAS_WEB_APP_URL_HERE')) {
-                if (cachedData.length === 0) {
+                // 실시간성을 위해 강제 새로고침 시 혹은 최초 로드 시 데이터를 가져옵니다.
+                if (forceRefresh || cachedData.length === 0) {
                     list.innerHTML = '<tr><td colspan="5" style="padding:40px;">데이터를 불러오는 중입니다...</td></tr>';
                     try {
-                        const response = await fetch(GAS_URL);
+                        const response = await fetch(`${GAS_URL}?t=${Date.now()}`); 
                         cachedData = await response.json();
+                        console.log('데이터 로드 완료:', cachedData.length, '건');
                     } catch (err) {
                         console.error('Fetch error:', err);
-                        list.innerHTML = '<tr><td colspan="5" style="padding:40px; color:red;">구글 데이터를 불러오지 못했습니다. 로컬 데이터를 대신 표시합니다.</td></tr>';
+                        list.innerHTML = '<tr><td colspan="5" style="padding:40px; color:red;">구글 데이터를 불러오지 못했습니다.</td></tr>';
                         cachedData = JSON.parse(localStorage.getItem('security_check_data') || '[]');
                     }
                 }
@@ -729,9 +737,32 @@
                 data = JSON.parse(localStorage.getItem('security_check_data') || '[]');
             }
 
-            // 선택된 날짜의 데이터만 필터링
-            const filtered = data.filter(i => i.checkDate === selectedDate);
-            document.getElementById('statusCount').innerText = `${selectedDate} 점검 현황`;
+            // 선택된 날짜의 데이터만 필터링 (다양한 날짜 형식을 YYYY-MM-DD로 정규화)
+            const filtered = data.filter(i => {
+                if (!i.checkDate) return false;
+                
+                let itemDate = String(i.checkDate).trim();
+                // ISO 8601 및 다양한 구분자 처리
+                if (itemDate.includes('T')) itemDate = itemDate.split('T')[0];
+                else if (itemDate.includes(' ')) itemDate = itemDate.split(' ')[0];
+                
+                // 구분자 정규화 (. / 을 - 로 변경)
+                itemDate = itemDate.replace(/\. /g, '-').replace(/\./g, '-').replace(/\//g, '-').replace(/ /g, '-');
+                if (itemDate.endsWith('-')) itemDate = itemDate.slice(0, -1);
+                
+                const parts = itemDate.split('-');
+                if (parts.length === 3) {
+                    const y = parts[0];
+                    const m = parts[1].padStart(2, '0');
+                    const d = parts[2].padStart(2, '0');
+                    itemDate = `${y}-${m}-${d}`;
+                }
+                return itemDate === selectedDate;
+            });
+
+            const completedCount = filtered.length;
+            const totalCount = FLOORS.length;
+            document.getElementById('statusCount').innerText = `${selectedDate} 현황 (${completedCount}/${totalCount} 완료)`;
             list.innerHTML = '';
 
             // 모든 층을 순회하며 표시
@@ -741,7 +772,7 @@
 
                 if (item) {
                     tr.onclick = () => showRecordActions(item);
-                    
+
                     const d = new Date(item.id);
                     const month = d.getMonth() + 1;
                     const date = d.getDate();
@@ -752,7 +783,7 @@
                     tr.innerHTML = `
                         <td>${formattedDate}</td>
                         <td style="font-weight:bold; color:var(--nhis-blue);">${floor}</td>
-                        <td>${item.position}</td>
+                        <td>${item.position}급</td>
                         <td>${item.userName}</td>
                         <td><img src="${item.signature}" class="sig-thumbnail"></td>
                     `;
@@ -1089,7 +1120,7 @@
             }
         }
 
-   
+
 
 
 
@@ -1101,7 +1132,7 @@
             const mm = String(today.getMonth() + 1).padStart(2, '0');
             const dd = String(today.getDate()).padStart(2, '0');
             document.getElementById('dateSelector').value = `${yyyy}-${mm}-${dd}`;
-            
+
             renderRecords();
             initModalCanvas();
         };
