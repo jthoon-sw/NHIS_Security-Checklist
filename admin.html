@@ -564,6 +564,7 @@
     </div>
 
 
+
     <!-- Official Form View (Hidden by default, used for export) -->
     <div id="officialFormArea">
         <table class="official-table">
@@ -708,18 +709,17 @@
 
     <script>
         // Google Apps Script 웹 앱 URL을 여기에 입력하세요 (index.html과 동일한 URL).
-        const GAS_URL = 'https://script.google.com/macros/s/AKfycbxolqZH5IxC7iyY6BzvfgdnksFZUYUaQzzOF_Pih01g9IF-LEuXSLvGSwrWm93utuJ0/exec';
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbxd0iKJUCzLikii4T8Zg32Skvn65-BLf0I1EGq-RNVdlK9hhLx3RdFV_DPM2CrqVpaV/exec';
         const FLOORS = ['1층', '2층', '3층', '4층', '5층', '6층', '7층', '8층', '별관2층'];
         let currentId = null;
         let cachedData = []; // 구글 드라이브에서 불러온 데이터 캐시
+
 
         async function renderRecords(forceRefresh = false) {
             let data = [];
             const selectedDate = document.getElementById('dateSelector').value;
             const list = document.getElementById('recordList');
-
             if (GAS_URL && !GAS_URL.includes('YOUR_GAS_WEB_APP_URL_HERE')) {
-                // 실시간성을 위해 강제 새로고침 시 혹은 최초 로드 시 데이터를 가져옵니다.
                 if (forceRefresh || cachedData.length === 0) {
                     list.innerHTML = '<tr><td colspan="5" style="padding:40px;">데이터를 불러오는 중입니다...</td></tr>';
                     try {
@@ -737,16 +737,14 @@
                 data = JSON.parse(localStorage.getItem('security_check_data') || '[]');
             }
 
-            // 선택된 날짜의 데이터만 필터링 (다양한 날짜 형식을 YYYY-MM-DD로 정규화)
+            // 선택된 날짜의 데이터만 필터링
             const filtered = data.filter(i => {
                 if (!i.checkDate) return false;
                 
                 let itemDate = String(i.checkDate).trim();
-                // ISO 8601 및 다양한 구분자 처리
                 if (itemDate.includes('T')) itemDate = itemDate.split('T')[0];
                 else if (itemDate.includes(' ')) itemDate = itemDate.split(' ')[0];
                 
-                // 구분자 정규화 (. / 을 - 로 변경)
                 itemDate = itemDate.replace(/\. /g, '-').replace(/\./g, '-').replace(/\//g, '-').replace(/ /g, '-');
                 if (itemDate.endsWith('-')) itemDate = itemDate.slice(0, -1);
                 
@@ -757,7 +755,12 @@
                     const d = parts[2].padStart(2, '0');
                     itemDate = `${y}-${m}-${d}`;
                 }
-                return itemDate === selectedDate;
+
+                const matches = (itemDate === selectedDate);
+                // 점검 데이터가 있는데 미점검으로 뜬다면 이 로그가 핵심
+                if (matches) console.log(`[매칭 성공] ${i.department}: ${itemDate} === ${selectedDate}`);
+                
+                return matches;
             });
 
             const completedCount = filtered.length;
