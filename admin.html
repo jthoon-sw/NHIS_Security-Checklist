@@ -1068,18 +1068,27 @@
             const storageHeader = document.querySelector('.storage-header span:first-child');
 
             if (GAS_URL && !GAS_URL.includes('YOUR_GAS_WEB_APP_URL_HERE')) {
-                storageHeader.innerText = '저장소 사용 현황';
+                storageHeader.innerText = '데이터 저장소 사용 현황';
                 try {
                     // 캐시 방지를 위해 타임스탬프 추가
                     const response = await fetch(`${GAS_URL}?action=getStorage&t=${Date.now()}`);
                     const info = await response.json();
 
-                    // Byte를 GB 단위로 변환
+                    // 단위를 유연하게 결정 (1GB 미만이면 MB로 표시)
+                    let usedDisplay;
+                    const usedMB = (info.used / (1024 ** 2)).toFixed(2);
                     const usedGB = (info.used / (1024 ** 3)).toFixed(2);
-                    const limitGB = (info.limit / (1024 ** 3)).toFixed(0);
-                    const percent = ((info.used / info.limit) * 100).toFixed(1);
 
-                    document.getElementById('usedStorage').innerText = `${usedGB} GB`;
+                    if (info.used < (1024 ** 3)) {
+                        usedDisplay = `${usedMB} MB`;
+                    } else {
+                        usedDisplay = `${usedGB} GB`;
+                    }
+
+                    const limitGB = (info.limit / (1024 ** 3)).toFixed(0);
+                    const percent = ((info.used / info.limit) * 100).toFixed(2); // 소수점 둘째자리까지 표시
+
+                    document.getElementById('usedStorage').innerText = usedDisplay;
                     document.getElementById('storagePercent').innerText = `${percent}%`;
                     document.getElementById('storageBar').style.width = `${percent}%`;
                     document.getElementById('totalLimitText').innerText = `전체 용량: ${limitGB} GB`;
