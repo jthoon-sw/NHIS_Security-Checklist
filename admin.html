@@ -542,6 +542,8 @@
                         style="padding:5px; border:1px solid #ddd; border-radius:4px;">
                     <button onclick="renderRecords(true)" class="btn btn-outline"
                         style="padding:5px 10px; font-size:0.8rem;">새로고침</button>
+                    <button onclick="toggleRawData()" class="btn btn-outline"
+                        style="padding:5px 10px; font-size:0.8rem; color:#666; border-style:dashed;">데이터진단</button>
                 </div>
             </div>
         </div>
@@ -714,6 +716,18 @@
         let currentId = null;
         let cachedData = []; // 구글 드라이브에서 불러온 데이터 캐시
 
+        // 연동 데이터 진단용 함수
+        function toggleRawData() {
+            const area = document.getElementById('debugArea');
+            if (!area) return;
+            area.style.display = area.style.display === 'none' ? 'block' : 'none';
+            if (area.style.display === 'block') {
+                const out = document.getElementById('debugOutput');
+                out.innerHTML = `<p style="color:blue; font-weight:bold;">[가져온 원본 데이터 목록]</p>`;
+                out.innerHTML += `<pre style="background:#eee; padding:10px; border-radius:4px; margin-top:10px;">${JSON.stringify(cachedData, null, 2)}</pre>`;
+            }
+        }
+
         async function renderRecords(forceRefresh = false) {
             let data = [];
             const selectedDate = document.getElementById('dateSelector').value;
@@ -740,25 +754,44 @@
             const filtered = data.filter(i => {
                 if (!i.checkDate) return false;
                 
-                // GAS에서 보낸 "YYYY-MM-DD" 형식을 로컬 selectedDate와 직접 비교
-                let itemDate = String(i.checkDate).trim();
-                
-                // ISO / Locale / 점(.) 혼용 대응 (견고함 보강)
-                if (itemDate.includes('T')) itemDate = itemDate.split('T')[0];
-                else if (itemDate.includes(' ')) itemDate = itemDate.split(' ')[0];
-                
-                itemDate = itemDate.replace(/\. /g, '-').replace(/\./g, '-').replace(/\//g, '-').replace(/ /g, '-');
-                if (itemDate.endsWith('-')) itemDate = itemDate.slice(0, -1);
-                
-                const parts = itemDate.split('-');
-                if (parts.length === 3) {
-                    const y = parts[0];
-                    const m = parts[1].padStart(2, '0');
-                    const d = parts[2].padStart(2, '0');
-                    itemDate = `${y}-${m}-${d}`;
+                let itemDateStr = String(i.checkDate).trim();
+                let finalDate = "";
+
+                // ISO 형식(T 포함)인 경우 현지 시간대로 변환 시도
+                if (itemDateStr.includes('T') || itemDateStr.includes('Z')) {
+                    try {
+                        const dObj = new Date(itemDateStr);
+                        if (!isNaN(dObj.getTime())) {
+                            const y = dObj.getFullYear();
+                            const m = String(dObj.getMonth() + 1).padStart(2, '0');
+                            const d = String(dObj.getDate()).padStart(2, '0');
+                            finalDate = `${y}-${m}-${d}`;
+                        }
+                    } catch(e) {}
                 }
 
-                return (itemDate === selectedDate);
+                if (!finalDate) {
+                    // 기존 문자열 처리 및 구분자 통일
+                    let temp = itemDateStr.split('T')[0].split(' ')[0];
+                    temp = temp.replace(/\. /g, '-').replace(/\./g, '-').replace(/\//g, '-').replace(/ /g, '-');
+                    if (temp.endsWith('-')) temp = temp.slice(0, -1);
+                    
+                    const parts = temp.split('-');
+                    if (parts.length === 3) {
+                        const y = parts[0];
+                        const m = parts[1].padStart(2, '0');
+                        const d = parts[2].padStart(2, '0');
+                        finalDate = `${y}-${m}-${d}`;
+                    } else {
+                        finalDate = temp;
+                    }
+                }
+                
+                const dateMatches = (finalDate === selectedDate);
+                if (dateMatches) {
+                    console.log(`[날짜 일치] ${i.department} (제출일: ${finalDate})`);
+                }
+                return dateMatches;
             });
 
             const completedCount = filtered.length;
@@ -767,9 +800,17 @@
             list.innerHTML = '';
 
             // 모든 층을 순회하며 표시
+            console.log('--- 층별 매칭 시작 ---');
             FLOORS.forEach(floor => {
                 const tr = document.createElement('tr');
-                const item = filtered.find(i => i.department === floor);
+                // 층 이름 비교 시 공백 제거 등 유연하게 처리
+                const item = filtered.find(i => {
+                    const sheetDept = String(i.department || '').replace(/\s/g, '');
+                    const targetDept = String(floor).replace(/\s/g, '');
+                    const isMatch = (sheetDept === targetDept);
+                    if (isMatch) console.log(`[매칭 성공] 시트:${sheetDept} === 기준:${targetDept}`);
+                    return isMatch;
+                });
 
                 if (item) {
                     tr.onclick = () => showRecordActions(item);
@@ -1145,6 +1186,12 @@
             }
         });
     </script>
+    <!-- Debug Area (진단용 - 버튼 클릭 시 노출) -->
+    <div id="debugArea" style="display:none; background:#fff; padding:20px; border:2px solid var(--nhis-blue); border-radius:8px; margin:20px;">
+        <h3 style="margin-bottom:10px; color:var(--nhis-blue);">데이터 연동 진단 패널</h3>
+        <p style="font-size:0.85rem; color:#666; margin-bottom:15px;">이 패널은 구글 시트에서 실제로 어떤 값이 넘어오고 있는지 보여줍니다. '미점검' 에러 해결을 위한 진단 도구입니다.</p>
+        <div id="debugOutput" style="font-family:monospace; font-size:0.8rem; overflow:auto; max-height:400px; line-height:1.4;"></div>
+    </div>
 </body>
 
 </html>
