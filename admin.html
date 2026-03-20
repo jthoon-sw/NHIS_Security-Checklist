@@ -709,11 +709,10 @@
 
     <script>
         // Google Apps Script 웹 앱 URL을 여기에 입력하세요 (index.html과 동일한 URL).
-        const GAS_URL = 'https://script.google.com/macros/s/AKfycbxjaSYDsjjy2gYmeSrk3rRQiv4e1gYl--B3f2ZZbb1NqE-3572ClpRVnGQnrXjOSb6r/exec';
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbwTOa0hwUC7JnLKTpN9ErW5FIbnrcO3Wc13oz_Qedu6u6jGyCYOi_mK8eBqObkskjNH/exec';
         const FLOORS = ['1층', '2층', '3층', '4층', '5층', '6층', '7층', '8층', '별관2층'];
         let currentId = null;
         let cachedData = []; // 구글 드라이브에서 불러온 데이터 캐시
-
 
         async function renderRecords(forceRefresh = false) {
             let data = [];
@@ -741,7 +740,10 @@
             const filtered = data.filter(i => {
                 if (!i.checkDate) return false;
                 
+                // GAS에서 보낸 "YYYY-MM-DD" 형식을 로컬 selectedDate와 직접 비교
                 let itemDate = String(i.checkDate).trim();
+                
+                // ISO / Locale / 점(.) 혼용 대응 (견고함 보강)
                 if (itemDate.includes('T')) itemDate = itemDate.split('T')[0];
                 else if (itemDate.includes(' ')) itemDate = itemDate.split(' ')[0];
                 
@@ -756,11 +758,7 @@
                     itemDate = `${y}-${m}-${d}`;
                 }
 
-                const matches = (itemDate === selectedDate);
-                // 점검 데이터가 있는데 미점검으로 뜬다면 이 로그가 핵심
-                if (matches) console.log(`[매칭 성공] ${i.department}: ${itemDate} === ${selectedDate}`);
-                
-                return matches;
+                return (itemDate === selectedDate);
             });
 
             const completedCount = filtered.length;
