@@ -928,12 +928,12 @@
         }
 
         async function del(id) {
-            if (!confirm('구글 드라이브에서도 삭제됩니다. 정말로 삭제하시겠습니까?')) return;
-            
+            if (!confirm('저장소에서도 삭제됩니다. 정말로 삭제하시겠습니까?')) return;
+
             // 로컬 스토리지 삭제
             const data = JSON.parse(localStorage.getItem('security_check_data') || '[]');
             localStorage.setItem('security_check_data', JSON.stringify(data.filter(i => i.id !== id)));
-            
+
             // 구글 드라이브 삭제 전송
             if (GAS_URL && !GAS_URL.includes('YOUR_GAS_WEB_APP_URL_HERE')) {
                 try {
@@ -953,7 +953,7 @@
                     alert('구글 드라이브 삭제 요청 중 오류가 발생했습니다.');
                 }
             }
-            
+
             renderRecords();
             updateStorageInfo();
         }
@@ -1066,14 +1066,14 @@
         async function updateStorageInfo() {
             // 기본 헤더 텍스트 변경
             const storageHeader = document.querySelector('.storage-header span:first-child');
-            
+
             if (GAS_URL && !GAS_URL.includes('YOUR_GAS_WEB_APP_URL_HERE')) {
-                storageHeader.innerText = '구글 드라이브 사용 현황';
+                storageHeader.innerText = '저장소 사용 현황';
                 try {
                     // 캐시 방지를 위해 타임스탬프 추가
                     const response = await fetch(`${GAS_URL}?action=getStorage&t=${Date.now()}`);
                     const info = await response.json();
-                    
+
                     // Byte를 GB 단위로 변환
                     const usedGB = (info.used / (1024 ** 3)).toFixed(2);
                     const limitGB = (info.limit / (1024 ** 3)).toFixed(0);
