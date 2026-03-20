@@ -709,12 +709,34 @@
     </div>
 
     <script>
+        // Google Apps Script 웹 앱 URL을 여기에 입력하세요 (index.html과 동일한 URL).
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbwgEGUZyz4RVFEyeroVjtZQ_uF1yJsOj4amtH0ydvx7ArcY1nziYQxZ4bMcuH78JlRMRg/exec';
         let currentId = null;
+        let cachedData = []; // 구글 드라이브에서 불러온 데이터 캐시
 
-        function renderRecords() {
-            const data = JSON.parse(localStorage.getItem('security_check_data') || '[]');
+        async function renderRecords() {
+            let data = [];
             const filter = document.getElementById('deptSelector').value;
             const list = document.getElementById('recordList');
+
+            // GAS URL이 설정되어 있으면 실시간 조회, 아니면 로컬 스토리지 사용
+            if (GAS_URL && !GAS_URL.includes('YOUR_GAS_WEB_APP_URL_HERE')) {
+                if (cachedData.length === 0) {
+                    list.innerHTML = '<tr><td colspan="6" style="padding:40px;">데이터를 불러오는 중입니다...</td></tr>';
+                    try {
+                        const response = await fetch(GAS_URL);
+                        cachedData = await response.json();
+                    } catch (err) {
+                        console.error('Fetch error:', err);
+                        list.innerHTML = '<tr><td colspan="6" style="padding:40px; color:red;">구글 데이터를 불러오지 못했습니다. 로컬 데이터를 대신 표시합니다.</td></tr>';
+                        cachedData = JSON.parse(localStorage.getItem('security_check_data') || '[]');
+                    }
+                }
+                data = cachedData;
+            } else {
+                data = JSON.parse(localStorage.getItem('security_check_data') || '[]');
+            }
+
             const filtered = filter === '전체' ? data : data.filter(i => i.department === filter);
 
             document.getElementById('statusCount').innerText = `총 ${filtered.length}건의 기록`;

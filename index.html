@@ -741,6 +741,9 @@
     </div>
 
     <script>
+        // Google Apps Script 웹 앱 URL을 여기에 입력하세요.
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbwgEGUZyz4RVFEyeroVjtZQ_uF1yJsOj4amtH0ydvx7ArcY1nziYQxZ4bMcuH78JlRMRg/exec';
+
         document.addEventListener('DOMContentLoaded', () => {
             // 새로고침 시 최상단으로 이동
             if ('scrollRestoration' in history) {
@@ -908,12 +911,37 @@
                     signature: sigPreview.src
                 };
 
-                const data = JSON.parse(localStorage.getItem('security_check_data') || '[]');
-                data.push(submission);
-                localStorage.setItem('security_check_data', JSON.stringify(data));
+                // 로컬 스토리지 백업 (선택 사항)
+                const localData = JSON.parse(localStorage.getItem('security_check_data') || '[]');
+                localData.push(submission);
+                localStorage.setItem('security_check_data', JSON.stringify(localData));
 
-                alert(`성공적으로 제출되었습니다.\n제출일시: ${submission.submitTime}`);
-                location.reload();
+                // Google Apps Script로 전송
+                if (GAS_URL && !GAS_URL.includes('YOUR_GAS_WEB_APP_URL_HERE')) {
+                    const submitBtn = document.querySelector('.btn-submit');
+                    const originalText = submitBtn.innerText;
+                    submitBtn.disabled = true;
+                    submitBtn.innerText = '제출 중...';
+
+                    fetch(GAS_URL, {
+                        method: 'POST',
+                        mode: 'no-cors', // GAS의 CORS 제한 때문에 no-cors 사용 (리턴값을 확인할 수 없으나 데이터는 전송됨)
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(submission)
+                    })
+                        .then(() => {
+                            alert(`성공적으로 제출되었습니다.\n제출일시: ${submission.submitTime}`);
+                            location.reload();
+                        })
+                        .catch(err => {
+                            console.error('Error:', err);
+                            alert('구글 드라이브 전송 중 오류가 발생했습니다. 로컬 스토리지에만 저장되었습니다.');
+                            location.reload();
+                        });
+                } else {
+                    alert(`성공적으로 제출되었습니다(로컬 모드).\n제출일시: ${submission.submitTime}\n\n※ 구글 앱스 스크립트 URL이 설정되지 않아 로컬 스토리지에만 저장되었습니다.`);
+                    location.reload();
+                }
             };
 
 
