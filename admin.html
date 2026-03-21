@@ -659,12 +659,12 @@
                     <div>
                         <label>직급</label>
                         <select id="edit_position">
-                            <option value="1급">1급</option>
-                            <option value="2급">2급</option>
-                            <option value="3급">3급</option>
-                            <option value="4급">4급</option>
-                            <option value="5급">5급</option>
-                            <option value="6급">6급</option>
+                            <option value="1">1급</option>
+                            <option value="2">2급</option>
+                            <option value="3">3급</option>
+                            <option value="4">4급</option>
+                            <option value="5">5급</option>
+                            <option value="6">6급</option>
                         </select>
                     </div>
                     <div>
@@ -998,23 +998,60 @@
             document.getElementById('modal').style.display = 'flex';
         }
 
-        function saveChanges() {
+        async function saveChanges() {
             const data = JSON.parse(localStorage.getItem('security_check_data') || '[]');
             const idx = data.findIndex(i => i.id === currentId);
+            if (idx === -1) return;
 
-            data[idx].submitTime = document.getElementById('edit_submitTime').value;
-            data[idx].department = document.getElementById('edit_department').value;
-            data[idx].checkerType = document.getElementById('edit_checkerType').value;
-            data[idx].position = document.getElementById('edit_position').value;
-            data[idx].userName = document.getElementById('edit_userName').value;
-            data[idx].signature = currentEditingSig;
+            // 원본 데이터 복사 및 수정 사항 반영
+            const updatedItem = { ...data[idx] };
+            updatedItem.submitTime = document.getElementById('edit_submitTime').value;
+            updatedItem.department = document.getElementById('edit_department').value;
+            updatedItem.checkerType = document.getElementById('edit_checkerType').value;
+            updatedItem.position = document.getElementById('edit_position').value;
+            updatedItem.userName = document.getElementById('edit_userName').value;
+            updatedItem.signature = currentEditingSig;
 
+            // 점검 항목 업데이트
             for (let i = 1; i <= 4; i++) {
-                data[idx].items[`item${i}`].value = document.getElementById(`edit_val_${i}`).value;
-                if (data[idx].items[`item${i}`].type) data[idx].items[`item${i}`].type = data[idx].checkerType;
+                if (updatedItem.items && updatedItem.items[`item${i}`]) {
+                    updatedItem.items[`item${i}`].value = document.getElementById(`edit_val_${i}`).value;
+                    updatedItem.items[`item${i}`].type = updatedItem.checkerType;
+                }
             }
 
+            // 1. 로컬 스토리지 업데이트
+            data[idx] = updatedItem;
             localStorage.setItem('security_check_data', JSON.stringify(data));
+
+            // 2. 구글 드라이브(GAS) 업데이트 알림 (기존 행 삭제 후 새 데이터 추가 방식)
+            if (GAS_URL && !GAS_URL.includes('YOUR_GAS_WEB_APP_URL_HERE')) {
+                try {
+                    // action: 'overwrite', oldId: currentId 를 포함하여 전송
+                    const submission = { 
+                        ...updatedItem, 
+                        action: 'overwrite', 
+                        oldId: currentId 
+                    };
+                    
+                    fetch(GAS_URL, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'text/plain' },
+                        body: JSON.stringify(submission)
+                    });
+                    
+                    // 관리자 페이지 내부 캐시(cachedData)도 즉시 반영
+                    const cacheIdx = cachedData.findIndex(i => i.id === currentId);
+                    if (cacheIdx !== -1) {
+                        cachedData[cacheIdx] = updatedItem;
+                    }
+                    console.log('구글 드라이브 업데이트 요청 전송 완료');
+                } catch (err) {
+                    console.error('Drive sync error:', err);
+                }
+            }
+
             document.getElementById('modal').style.display = 'none';
             renderRecords();
         }
