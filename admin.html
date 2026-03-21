@@ -247,7 +247,7 @@
 
         .edit-sig-preview {
             width: 100%;
-            height: 100px;
+            height: 80px;
             border: 1px solid #ddd;
             background: #f9f9f9;
             cursor: pointer;
@@ -885,7 +885,7 @@
             const resize = () => {
                 const r = window.devicePixelRatio || 1;
                 modalCanvas.width = window.innerWidth * r;
-                modalCanvas.height = (window.innerHeight - 150) * r;
+                modalCanvas.height = (window.innerHeight - 250) * r;
                 modalCtx.scale(r, r);
                 modalCtx.strokeStyle = '#222';
                 modalCtx.lineWidth = 3;
