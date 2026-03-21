@@ -780,7 +780,11 @@
                 return dateMatches;
             });
 
-            const completedCount = filtered.length;
+            const completedCount = FLOORS.filter(floor => {
+                const targetDept = String(floor).replace(/\s/g, '');
+                return filtered.some(i => String(i.department || '').replace(/\s/g, '') === targetDept);
+            }).length;
+            
             const totalCount = FLOORS.length;
             document.getElementById('statusCount').innerText = `${selectedDate} 현황 (${completedCount}/${totalCount} 완료)`;
             list.innerHTML = '';
