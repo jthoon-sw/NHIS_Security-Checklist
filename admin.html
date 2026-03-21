@@ -780,10 +780,17 @@
                 return dateMatches;
             });
 
-            const completedCount = FLOORS.filter(floor => {
-                const targetDept = String(floor).replace(/\s/g, '');
-                return filtered.some(i => String(i.department || '').replace(/\s/g, '') === targetDept);
-            }).length;
+            // 유일한 층수 계산 (Set 사용으로 중복 방지)
+            const completedFloors = new Set();
+            filtered.forEach(item => {
+                const dept = String(item.department || '').replace(/\s/g, '');
+                // 현재 정의된 FLOORS 목록에 존재하는 층인 경우에만 카운트
+                if (FLOORS.some(f => String(f).replace(/\s/g, '') === dept)) {
+                    completedFloors.add(dept);
+                }
+            });
+            const completedCount = completedFloors.size;
+            console.log(`[현황 집계] 유일 층수: ${completedCount}, 대상 데이터: ${filtered.length}건`);
             
             const totalCount = FLOORS.length;
             document.getElementById('statusCount').innerText = `${selectedDate} 현황 (${completedCount}/${totalCount} 완료)`;
