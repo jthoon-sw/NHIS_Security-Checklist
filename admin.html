@@ -780,36 +780,22 @@
                 return dateMatches;
             });
 
-            // 유일한 층수 계산 (Set 사용으로 중복 방지)
-            const completedFloors = new Set();
-            filtered.forEach(item => {
-                const dept = String(item.department || '').replace(/\s/g, '');
-                // 현재 정의된 FLOORS 목록에 존재하는 층인 경우에만 카운트
-                if (FLOORS.some(f => String(f).replace(/\s/g, '') === dept)) {
-                    completedFloors.add(dept);
-                }
-            });
-            const completedCount = completedFloors.size;
-            console.log(`[현황 집계] 유일 층수: ${completedCount}, 대상 데이터: ${filtered.length}건`);
-            
-            const totalCount = FLOORS.length;
-            document.getElementById('statusCount').innerText = `${selectedDate} 현황 (${completedCount}/${totalCount} 완료)`;
             list.innerHTML = '';
-
-            // 모든 층을 순회하며 표시
-            console.log('--- 층별 매칭 시작 ---');
+            let completedCount = 0;
+            const totalCount = FLOORS.length;
+            
+            // 모든 층을 순회하며 데이터 유무 확인 및 렌더링
             FLOORS.forEach(floor => {
                 const tr = document.createElement('tr');
-                // 층 이름 비교 시 공백 제거 등 유연하게 처리 (최신 데이터가 우선되도록 배열을 뒤집어서 찾음)
+                const targetDept = String(floor).replace(/\s/g, '');
+                
+                // 해당 층의 최신 데이터 찾기
                 const item = [...filtered].reverse().find(i => {
-                    const sheetDept = String(i.department || '').replace(/\s/g, '');
-                    const targetDept = String(floor).replace(/\s/g, '');
-                    const isMatch = (sheetDept === targetDept);
-                    if (isMatch) console.log(`[최신 매칭 성공] 시트:${sheetDept} === 기준:${targetDept}`);
-                    return isMatch;
+                    return String(i.department || '').replace(/\s/g, '') === targetDept;
                 });
 
                 if (item) {
+                    completedCount++;
                     tr.onclick = () => showRecordActions(item);
 
                     // 제출일시 표시 (Number 변환으로 안정성 확보)
@@ -844,6 +830,9 @@
                 }
                 list.appendChild(tr);
             });
+
+            // 현황 카운트 업데이트 (루프 완료 후)
+            document.getElementById('statusCount').innerText = `${selectedDate} 현황 (${completedCount}/${totalCount} 완료)`;
         }
 
         let currentItem = null;
