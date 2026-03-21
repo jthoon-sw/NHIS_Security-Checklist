@@ -789,12 +789,12 @@
             console.log('--- 층별 매칭 시작 ---');
             FLOORS.forEach(floor => {
                 const tr = document.createElement('tr');
-                // 층 이름 비교 시 공백 제거 등 유연하게 처리
-                const item = filtered.find(i => {
+                // 층 이름 비교 시 공백 제거 등 유연하게 처리 (최신 데이터가 우선되도록 배열을 뒤집어서 찾음)
+                const item = [...filtered].reverse().find(i => {
                     const sheetDept = String(i.department || '').replace(/\s/g, '');
                     const targetDept = String(floor).replace(/\s/g, '');
                     const isMatch = (sheetDept === targetDept);
-                    if (isMatch) console.log(`[매칭 성공] 시트:${sheetDept} === 기준:${targetDept}`);
+                    if (isMatch) console.log(`[최신 매칭 성공] 시트:${sheetDept} === 기준:${targetDept}`);
                     return isMatch;
                 });
 
