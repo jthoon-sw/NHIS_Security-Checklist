@@ -362,6 +362,7 @@
             .storage-monitor,
             #modal,
             #signatureModal,
+            #pdfOptionsModal,
             #pdfPreviewModal {
                 display: none !important;
             }
@@ -707,6 +708,42 @@
         <div class="sig-modal-footer">
             <button type="button" class="btn-sig-clear" id="btnSigClear">지우기</button>
             <button type="button" class="btn-sig-submit" id="btnSigSubmit">확인</button>
+        </div>
+    </div>
+
+    <!-- PDF 출력 옵션 모달 -->
+    <div id="pdfOptionsModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); z-index: 2000; justify-content: center; align-items: center;">
+        <div style="background: white; padding: 25px; border-radius: 4px; width: 450px; max-width: 90%;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 style="margin: 0;">PDF 인쇄 옵션</h3>
+                <button onclick="document.getElementById('pdfOptionsModal').style.display='none'" class="btn-sig-close" style="color:#333; font-size:1.5rem;">&times;</button>
+            </div>
+            <div style="margin-bottom: 20px;">
+                <label style="font-weight:bold; display:block; margin-bottom:8px;">대상 부서(층) 선택</label>
+                <select id="pdfFloorSelector" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size:1rem;">
+                    <option value="1층">1층</option>
+                    <option value="2층">2층</option>
+                    <option value="3층">3층</option>
+                    <option value="4층">4층</option>
+                    <option value="5층">5층</option>
+                    <option value="6층">6층</option>
+                    <option value="7층">7층</option>
+                    <option value="8층">8층</option>
+                    <option value="별관2층">별관 2층</option>
+                </select>
+            </div>
+            <div style="margin-bottom: 20px;">
+                <label style="font-weight:bold; display:block; margin-bottom:8px;">인쇄 기간 선택 (시작일 ~ 종료일)</label>
+                <div style="display:flex; gap:10px; align-items:center;">
+                    <input type="date" id="pdfStartDate" style="flex:1; padding:10px; border:1px solid #ddd; border-radius:4px; font-size:0.9rem;">
+                    <span style="font-weight:bold;">~</span>
+                    <input type="date" id="pdfEndDate" style="flex:1; padding:10px; border:1px solid #ddd; border-radius:4px; font-size:0.9rem;">
+                </div>
+            </div>
+            <div style="display: flex; justify-content: center; gap: 10px; margin-top:30px;">
+                <button class="btn btn-outline" style="flex:1;" onclick="document.getElementById('pdfOptionsModal').style.display='none'">취소</button>
+                <button class="btn btn-blue" style="flex:1; font-weight:bold;" onclick="generatePDFPreview()">미리보기 화면 생성</button>
+            </div>
         </div>
     </div>
 
@@ -1108,11 +1145,44 @@
         }
 
         function exportOfficialPDF() {
+            // 인쇄 옵션 모달 기본값 세팅 (일주일 전 ~ 오늘)
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            const todayStr = `${yyyy}-${mm}-${dd}`;
+            
+            const lastWeek = new Date(today.getTime() - 6 * 24 * 60 * 60 * 1000);
+            const lw_yyyy = lastWeek.getFullYear();
+            const lw_mm = String(lastWeek.getMonth() + 1).padStart(2, '0');
+            const lw_dd = String(lastWeek.getDate()).padStart(2, '0');
+            const lwStr = `${lw_yyyy}-${lw_mm}-${lw_dd}`;
+
+            document.getElementById('pdfStartDate').value = lwStr;
+            document.getElementById('pdfEndDate').value = todayStr;
+            document.getElementById('pdfFloorSelector').value = '1층';
+            
+            document.getElementById('pdfOptionsModal').style.display = 'flex';
+        }
+
+        function generatePDFPreview() {
+            const startStr = document.getElementById('pdfStartDate').value;
+            const endStr = document.getElementById('pdfEndDate').value;
+            if (!startStr || !endStr) {
+                alert('인쇄 기간을 선택해주세요.');
+                return;
+            }
+            if (new Date(startStr) > new Date(endStr)) {
+                alert('시작일이 종료일보다 늦을 수 없습니다.');
+                return;
+            }
+
+            document.getElementById('pdfOptionsModal').style.display = 'none';
+
             try {
-                prepareOfficialTable();
+                preparePaginatedOfficialTable();
                 
-                // 미리보기 모달에 내용 복사 후 표시
-                // 인쇄용 테이블은 width 100%이므로 미리보기에서는 특정 폭 설정
+                // 생성된 테이블들을 미리보기 모달에 복사
                 const previewContent = document.getElementById('officialFormArea').innerHTML;
                 document.getElementById('pdfPreviewContent').innerHTML = `<div style="background:white; padding:30px; width:1000px; box-shadow:0 0 10px rgba(0,0,0,0.5);">${previewContent}</div>`;
                 document.getElementById('pdfPreviewModal').style.display = 'flex';
@@ -1131,10 +1201,31 @@
             }, 300);
         }
 
-        function prepareOfficialTable() {
-            const data = JSON.parse(localStorage.getItem('security_check_data') || '[]');
-            const filter = document.getElementById('deptSelector').value;
-            const filtered = filter === '전체' ? data : data.filter(i => i.department === filter);
+        function preparePaginatedOfficialTable() {
+            const data = (cachedData && cachedData.length > 0) ? cachedData : JSON.parse(localStorage.getItem('security_check_data') || '[]');
+            const targetFloor = document.getElementById('pdfFloorSelector').value;
+            const startStr = document.getElementById('pdfStartDate').value;
+            const endStr = document.getElementById('pdfEndDate').value;
+
+            const startDate = new Date(startStr);
+            const endDate = new Date(endStr);
+
+            // 해당 부서 및 날짜 범위 내 데이터 필터링
+            const filtered = data.filter(i => {
+                const deptMatch = String(i.department || '').replace(/\s/g, '') === targetFloor.replace(/\s/g, '');
+                if (!deptMatch) return false;
+                
+                const itemDateStr = String(i.checkDate || '').trim().replace(/\./g, '-');
+                const pDate = new Date(itemDateStr);
+                if (isNaN(pDate)) return false;
+                
+                // 날짜 비교 (시간 제거)
+                const checkTime = new Date(pDate.getFullYear(), pDate.getMonth(), pDate.getDate()).getTime();
+                const startTime = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate()).getTime();
+                const endTime = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate()).getTime();
+                
+                return checkTime >= startTime && checkTime <= endTime;
+            });
 
             // 날짜별 그룹화
             const grouped = {};
@@ -1144,83 +1235,152 @@
                 grouped[date][item.checkerType] = item;
             });
 
-            const body = document.getElementById('officialBody');
-            body.innerHTML = '';
+            const area = document.getElementById('officialFormArea');
+            area.innerHTML = ''; // 기존 테이블 내용 삭제
 
-            const sortedDates = Object.keys(grouped).filter(d => d && d !== 'undefined').sort((a, b) => new Date(a) - new Date(b));
+            let currentDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+            const end = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+            
+            let currentTbody = null;
 
-            if (sortedDates.length === 0) {
-                // 데이터가 없을 때 안내 행
-                const tr = document.createElement('tr');
-                tr.innerHTML = `<td colspan="19" style="height:100px;">해당 조건의 점검 기록이 없습니다.</td>`;
-                body.appendChild(tr);
-            }
-
-            sortedDates.forEach(date => {
-                const dayData = grouped[date];
-                const tr = document.createElement('tr');
-
-                let dayStr = date;
-                try {
-                    const d = new Date(date);
-                    if (!isNaN(d.getTime())) {
-                        dayStr = `${d.getMonth() + 1}.${d.getDate()}.(${'일월화수목금토'[d.getDay()]})`;
-                    }
-                } catch (e) { }
-
-                const getVal = (type, itemKey) => {
-                    const submission = dayData[type];
-                    if (!submission) return '';
-                    return submission.items[itemKey]?.value || '';
-                };
-
-                const getInfo = (type, key) => {
-                    const submission = dayData[type];
-                    if (!submission) return '';
-                    if (key === 'time') return new Date(submission.id).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
-                    return submission[key] || '';
-                };
-
-                tr.innerHTML = `
-                    <td class="font-bold">${dayStr}</td>
-                    <!-- 화재 -->
-                    <td>${getVal('최종퇴청자', 'item1')}</td>
-                    <td>${getVal('당직근무자', 'item1')}</td>
-                    <!-- 전원 -->
-                    <td>${getVal('최종퇴청자', 'item2')}</td>
-                    <td>${getVal('당직근무자', 'item2')}</td>
-                    <!-- 보안 -->
-                    <td>${getVal('최종퇴청자', 'item3')}</td>
-                    <td>${getVal('당직근무자', 'item3')}</td>
-                    <!-- 문단속 -->
-                    <td>${getVal('최종퇴청자', 'item4')}</td>
-                    <td>${getVal('당직근무자', 'item4')}</td>
-                    <td></td> <!-- 비고 -->
-                    <!-- 최종퇴청자 정보 -->
-                    <td>${getInfo('최종퇴청자', 'position')}</td>
-                    <td>${getInfo('최종퇴청자', 'userName')}</td>
-                    <td>${getInfo('최종퇴청자', 'time')}</td>
-                    <!-- 당직근무자 정보 -->
-                    <td>${getInfo('당직근무자', 'position')}</td>
-                    <td>${getInfo('당직근무자', 'userName')}</td>
-                    <td>${getInfo('당직근무자', 'time')}</td>
-                    <!-- 결재 -->
-                    <td></td>
-                    <td>전결</td>
-                    <td></td>
+            // 새로운 테이블 요소를 생성하는 헬퍼 함수
+            const createNewTable = () => {
+                const table = document.createElement('table');
+                table.className = 'official-table';
+                table.style.pageBreakAfter = 'always'; // 여기서 페이지 분할
+                table.style.marginBottom = '30px';
+                table.style.width = '100%';
+                
+                table.innerHTML = `
+                <thead>
+                    <tr>
+                        <th rowspan="2" class="diagonal-cell">
+                            <div class="diag-line"></div>
+                            <span class="diag-text-top">월</span>
+                            <span class="diag-text-bottom">일</span>
+                        </th>
+                        <th colspan="2">화재 단속<br>상태</th>
+                        <th colspan="2">소등 및 각종<br>전원 상태</th>
+                        <th colspan="2">서류보관<br>/잠금장치 상태</th>
+                        <th colspan="2">문단속<br>상태</th>
+                        <th rowspan="2" style="width:30px;">비고</th>
+                        <th colspan="3">최종퇴청자</th>
+                        <th colspan="3">당직근무자</th>
+                        <th colspan="3">결 재</th>
+                    </tr>
+                    <tr>
+                        <th>최종<br>퇴청자</th>
+                        <th>당직<br>근무자</th>
+                        <th>최종<br>퇴청자</th>
+                        <th>당직<br>근무자</th>
+                        <th>최종<br>퇴청자</th>
+                        <th>당직<br>근무자</th>
+                        <th>최종<br>퇴청자</th>
+                        <th>당직<br>근무자</th>
+                        <th>직급</th>
+                        <th>성명</th>
+                        <th>점검시간</th>
+                        <th>직급</th>
+                        <th>성명</th>
+                        <th>점검시간</th>
+                        <th>담당</th>
+                        <th>팀장</th>
+                        <th>부장</th>
+                    </tr>
+                </thead>
                 `;
-                body.appendChild(tr);
-            });
+                const tbody = document.createElement('tbody');
+                table.appendChild(tbody);
+                area.appendChild(table);
+                return tbody;
+            };
 
-            // 빈 행 추가 (최소 10행 유지)
-            for (let i = sortedDates.length; i < 10; i++) {
+            while (currentDate <= end) {
+                // 월요일(1)이면 새 테이블 생성, 또는 처음 시작 시
+                if (!currentTbody || currentDate.getDay() === 1) {
+                    currentTbody = createNewTable();
+                }
+
+                // 렌더링 날짜 문자열 준비
+                const yyyy = currentDate.getFullYear();
+                const mm = String(currentDate.getMonth() + 1).padStart(2, '0');
+                const dd = String(currentDate.getDate()).padStart(2, '0');
+                const targetDateStr = `${yyyy}-${mm}-${dd}`;
+                
+                // 데이터 찾기
+                let dayData = grouped[targetDateStr];
+                if (!dayData) {
+                    // YYYY. MM. DD. 형식 등 다양한 포맷 지원
+                    const foundKey = Object.keys(grouped).find(k => {
+                        const d = new Date(String(k).replace(/\./g, '-'));
+                        return d.getFullYear() === yyyy && d.getMonth()+1 === Number(mm) && d.getDate() === Number(dd);
+                    });
+                    if (foundKey) dayData = grouped[foundKey];
+                }
+
                 const tr = document.createElement('tr');
-                tr.innerHTML = `<td colspan="19"></td>`; // 실제 인쇄시엔 그냥 빈칸들로 채우는게 나음
-                // 구체적으로 빈 칸들 생성
-                let cells = '';
-                for (let j = 0; j < 19; j++) cells += '<td></td>';
-                tr.innerHTML = cells;
-                body.appendChild(tr);
+                const dayStr = `${Number(mm)}.${Number(dd)}.(${'일월화수목금토'[currentDate.getDay()]})<br><span style="font-size:0.7rem; color:#555;">${targetFloor}</span>`;
+                
+                if (dayData) {
+                    const getVal = (type, itemKey) => {
+                        const submission = dayData[type];
+                        if (!submission) return '';
+                        return submission.items[itemKey]?.value || '';
+                    };
+
+                    const getInfo = (type, infoKey) => {
+                        const submission = dayData[type];
+                        if (!submission) return '';
+                        if (infoKey === 'time') {
+                            const timeStr = submission.submitTime || submission.id;
+                            if (!timeStr) return '';
+                            try { return new Date(timeStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }); } 
+                            catch { return String(timeStr).substring(11, 16); }
+                        }
+                        if (infoKey === 'sig' && submission.signature) {
+                             return `<img src="${submission.signature}" style="max-height:20px;">`;
+                        }
+                        return submission[infoKey] || '';
+                    };
+                    
+                    tr.innerHTML = `
+                        <td class="font-bold" style="line-height:1.2;">${dayStr}</td>
+                        <!-- 화재 -->
+                        <td>${getVal('최종퇴청자', 'item1')}</td>
+                        <td>${getVal('당직근무자', 'item1')}</td>
+                        <!-- 전원 -->
+                        <td>${getVal('최종퇴청자', 'item2')}</td>
+                        <td>${getVal('당직근무자', 'item2')}</td>
+                        <!-- 보안 -->
+                        <td>${getVal('최종퇴청자', 'item3')}</td>
+                        <td>${getVal('당직근무자', 'item3')}</td>
+                        <!-- 문단속 -->
+                        <td>${getVal('최종퇴청자', 'item4')}</td>
+                        <td>${getVal('당직근무자', 'item4')}</td>
+                        <td></td>
+                        <!-- 최종퇴청자 -->
+                        <td>${getInfo('최종퇴청자', 'position')}</td>
+                        <td>${getInfo('최종퇴청자', 'sig') || getInfo('최종퇴청자', 'userName')}</td>
+                        <td>${getInfo('최종퇴청자', 'time')}</td>
+                        <!-- 당직근무자 -->
+                        <td>${getInfo('당직근무자', 'position')}</td>
+                        <td>${getInfo('당직근무자', 'sig') || getInfo('당직근무자', 'userName')}</td>
+                        <td>${getInfo('당직근무자', 'time')}</td>
+                        <!-- 결재 -->
+                        <td></td><td>전결</td><td></td>
+                    `;
+                } else {
+                    tr.innerHTML = `
+                        <td class="font-bold" style="line-height:1.2;">${dayStr}</td>
+                        <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+                        <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+                    `;
+                }
+
+                currentTbody.appendChild(tr);
+
+                // 다음 날
+                currentDate.setDate(currentDate.getDate() + 1);
             }
         }
 
