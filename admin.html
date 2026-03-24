@@ -354,6 +354,10 @@
         }
 
         @media print {
+            @page {
+                size: landscape;
+                margin: 5mm;
+            }
 
             .btn-group,
             .stats-bar,
@@ -365,6 +369,14 @@
             #pdfOptionsModal,
             #pdfPreviewModal {
                 display: none !important;
+            }
+
+            .official-table {
+                page-break-after: always;
+            }
+
+            .official-table:last-child {
+                page-break-after: auto !important;
             }
 
             /* 대시보드 테이블의 마지막 열(관리)만 숨기기 */
@@ -1275,7 +1287,6 @@
             const createNewTable = () => {
                 const table = document.createElement('table');
                 table.className = 'official-table';
-                table.style.pageBreakAfter = 'always'; // 여기서 페이지 분할
                 table.style.marginBottom = '30px';
                 table.style.width = '100%';
                 
