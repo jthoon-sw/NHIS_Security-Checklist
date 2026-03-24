@@ -449,11 +449,15 @@
             width: 100%;
             height: 100%;
             background: linear-gradient(to top right, transparent calc(50% - 0.5px), #000, transparent calc(50% + 0.5px));
+            z-index: 1;
         }
 
         .diag-text {
-            font-weight: 700;
-            font-size: 9pt;
+            position: relative;
+            z-index: 2;
+            font-weight: 800;
+            font-size: 10pt;
+            color: #000 !important;
         }
 
 
@@ -546,7 +550,6 @@
                 display: block !important;
             }
         }
-
     </style>
 </head>
 
@@ -634,6 +637,19 @@
                 </tr>
             </thead>
             <tbody id="officialBody"></tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="19" style="text-align:left; padding:10px 0; border:none; font-size:8pt; line-height:1.4;">
+                        <div style="margin-bottom: 3px;">* 점검사항별로 이상이 있을 때에는 X표, 이상이 없을 때에는 O표를 한다.</div>
+                        <div style="margin-bottom: 3px;">* 점검결과 이상이 있을 때에는 비고란에 그 내용을 기재한다.</div>
+                        <div style="margin-top: 8px;">주1) 화재단속상태: 배선 주위에 인화물질이 있는지 여부 확인</div>
+                        <div>주2) 소등 및 각종 전원상태: 컴퓨터/프린터/복사기/선풍기 및 전열기(커피포트/전기히터 등)의 전원스위치 차단 여부 확인</div>
+                        <div>주3) 서류보관/잠금장치상태: 책상 위 서류방치 여부, 캐비닛 및 서랍장의 잠금 여부 확인</div>
+                        <div>주4) 문단속상태: 외부와 통하는 창문, 출입문 등의 잠금 여부 확인</div>
+                        <div style="margin-top: 5px;">주5) 「당직 및 비상근무 규칙」 제5조제4항에 따라 당직근무자를 두지 않는 경우 당직근무자란은 기록을 생략한다.</div>
+                    </td>
+                </tr>
+            </tfoot>
         </table>
     </div>
     </div>
@@ -737,15 +753,18 @@
     </div>
 
     <!-- PDF 출력 옵션 모달 -->
-    <div id="pdfOptionsModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); z-index: 2000; justify-content: center; align-items: center;">
+    <div id="pdfOptionsModal"
+        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); z-index: 2000; justify-content: center; align-items: center;">
         <div style="background: white; padding: 25px; border-radius: 4px; width: 450px; max-width: 90%;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                 <h3 style="margin: 0;">PDF 인쇄 옵션</h3>
-                <button onclick="document.getElementById('pdfOptionsModal').style.display='none'" class="btn-sig-close" style="color:#333; font-size:1.5rem;">&times;</button>
+                <button onclick="document.getElementById('pdfOptionsModal').style.display='none'" class="btn-sig-close"
+                    style="color:#333; font-size:1.5rem;">&times;</button>
             </div>
             <div style="margin-bottom: 20px;">
                 <label style="font-weight:bold; display:block; margin-bottom:8px;">대상 부서(층) 선택</label>
-                <select id="pdfFloorSelector" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size:1rem;">
+                <select id="pdfFloorSelector"
+                    style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size:1rem;">
                     <option value="1층">1층</option>
                     <option value="2층">2층</option>
                     <option value="3층">3층</option>
@@ -760,29 +779,39 @@
             <div style="margin-bottom: 20px;">
                 <label style="font-weight:bold; display:block; margin-bottom:8px;">인쇄 기간 선택 (시작일 ~ 종료일)</label>
                 <div style="display:flex; gap:10px; align-items:center;">
-                    <input type="date" id="pdfStartDate" style="flex:1; padding:10px; border:1px solid #ddd; border-radius:4px; font-size:0.9rem;">
+                    <input type="date" id="pdfStartDate"
+                        style="flex:1; padding:10px; border:1px solid #ddd; border-radius:4px; font-size:0.9rem;">
                     <span style="font-weight:bold;">~</span>
-                    <input type="date" id="pdfEndDate" style="flex:1; padding:10px; border:1px solid #ddd; border-radius:4px; font-size:0.9rem;">
+                    <input type="date" id="pdfEndDate"
+                        style="flex:1; padding:10px; border:1px solid #ddd; border-radius:4px; font-size:0.9rem;">
                 </div>
             </div>
             <div style="display: flex; justify-content: center; gap: 10px; margin-top:30px;">
-                <button class="btn btn-outline" style="flex:1;" onclick="document.getElementById('pdfOptionsModal').style.display='none'">취소</button>
-                <button class="btn btn-blue" style="flex:1; font-weight:bold;" onclick="directPDFExport()">PDF 저장/인쇄</button>
+                <button class="btn btn-outline" style="flex:1;"
+                    onclick="document.getElementById('pdfOptionsModal').style.display='none'">취소</button>
+                <button class="btn btn-blue" style="flex:1; font-weight:bold;" onclick="directPDFExport()">PDF
+                    저장/인쇄</button>
             </div>
         </div>
     </div>
 
     <!-- PDF 인쇄 미리보기 모달 -->
-    <div id="pdfPreviewModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); z-index: 2000; justify-content: center; align-items: center;">
-        <div style="background: white; padding: 20px; border-radius: 4px; width: 95vw; height: 95vh; display: flex; flex-direction: column; position: relative;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 2px solid #333; padding-bottom: 10px;">
+    <div id="pdfPreviewModal"
+        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); z-index: 2000; justify-content: center; align-items: center;">
+        <div
+            style="background: white; padding: 20px; border-radius: 4px; width: 95vw; height: 95vh; display: flex; flex-direction: column; position: relative;">
+            <div
+                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 2px solid #333; padding-bottom: 10px;">
                 <h3 style="margin: 0; color: #333; font-size: 1.2rem;">PDF 인쇄 미리보기</h3>
                 <div style="display: flex; gap: 10px;">
-                    <button onclick="document.getElementById('pdfPreviewModal').style.display='none'" class="btn btn-outline">닫기</button>
-                    <button onclick="executePrint()" class="btn btn-blue" style="background:#0054a6; color:white;">인쇄 진행하기 (PDF 저장)</button>
+                    <button onclick="document.getElementById('pdfPreviewModal').style.display='none'"
+                        class="btn btn-outline">닫기</button>
+                    <button onclick="executePrint()" class="btn btn-blue" style="background:#0054a6; color:white;">인쇄
+                        진행하기 (PDF 저장)</button>
                 </div>
             </div>
-            <div id="pdfPreviewContent" style="flex: 1; overflow: auto; background: #e0e0e0; display: flex; justify-content: center; padding: 20px;">
+            <div id="pdfPreviewContent"
+                style="flex: 1; overflow: auto; background: #e0e0e0; display: flex; justify-content: center; padding: 20px;">
                 <!-- 이 안에 표가 복사됨 -->
             </div>
         </div>
@@ -795,65 +824,81 @@
         let currentId = null;
         let cachedData = []; // 구글 드라이브에서 불러온 데이터 캐시
 
+        // 공통 날짜 포맷 함수 (YYYY-MM-DD)
+        const getYYYYMMDD = (dVal) => {
+            if (!dVal) return "";
+            if (dVal instanceof Date) {
+                const y = dVal.getFullYear();
+                const m = String(dVal.getMonth() + 1).padStart(2, '0');
+                const d = String(dVal.getDate()).padStart(2, '0');
+                return `${y}-${m}-${d}`;
+            }
+            let s = String(dVal).trim();
+            
+            // ISO 8601 포맷 처리 (T 또는 Z 포함 시)
+            if (s.includes('T') || s.includes('Z')) {
+                try {
+                    const dObj = new Date(s);
+                    if (!isNaN(dObj.getTime())) {
+                        const y = dObj.getFullYear();
+                        const m = String(dObj.getMonth() + 1).padStart(2, '0');
+                        const d = String(dObj.getDate()).padStart(2, '0');
+                        return `${y}-${m}-${d}`;
+                    }
+                } catch(e) {}
+            }
+
+            // 일반 문자열 처리 (. / - 공백 등)
+            s = s.replace(/\. /g, '-').replace(/\./g, '-').replace(/\//g, '-').replace(/ /g, '-');
+            const parts = s.split('-').filter(p => /^\d+$/.test(p)); 
+            if (parts.length >= 3) {
+                let y = parts[0];
+                if (y.length === 2) y = "20" + y; // 2자리 연도 보정
+                const m = parts[1].padStart(2, '0');
+                const d = parts[2].padStart(2, '0');
+                return `${y}-${m}-${d}`;
+            }
+            return s.substring(0, 10);
+        };
+
+        // 데이터 병합 헬퍼 함수
+        function getMergedData() {
+            const localData = JSON.parse(localStorage.getItem('security_check_data') || '[]');
+            const combined = [...cachedData];
+            localData.forEach(lItem => {
+                // ID(타임스탬프)를 기준으로 중복 제거하며 병합
+                if (!combined.find(cItem => Number(cItem.id) === Number(lItem.id))) {
+                    combined.push(lItem);
+                }
+            });
+            // 최신순 정렬 (ID 내림차순)
+            return combined.sort((a, b) => Number(b.id) - Number(a.id));
+        }
+
         async function renderRecords(forceRefresh = false) {
-            let data = [];
             const selectedDate = document.getElementById('dateSelector').value;
             const list = document.getElementById('recordList');
+            
             if (GAS_URL && !GAS_URL.includes('YOUR_GAS_WEB_APP_URL_HERE')) {
                 if (forceRefresh || cachedData.length === 0) {
                     list.innerHTML = '<tr><td colspan="5" style="padding:40px;">데이터를 불러오는 중입니다...</td></tr>';
                     try {
-                        const response = await fetch(`${GAS_URL}?t=${Date.now()}`); 
+                        const response = await fetch(`${GAS_URL}?t=${Date.now()}`);
                         cachedData = await response.json();
-                        console.log('데이터 로드 완료:', cachedData.length, '건');
+                        console.log('구글 데이터 로드 완료:', cachedData.length, '건');
                     } catch (err) {
                         console.error('Fetch error:', err);
-                        list.innerHTML = '<tr><td colspan="5" style="padding:40px; color:red;">구글 데이터를 불러오지 못했습니다.</td></tr>';
-                        cachedData = JSON.parse(localStorage.getItem('security_check_data') || '[]');
+                        list.innerHTML = '<tr><td colspan="5" style="padding:40px; color:red;">구글 데이터를 불러오지 못했습니다. 로컬 데이터를 대신 사용합니다.</td></tr>';
                     }
                 }
-                data = cachedData;
-            } else {
-                data = JSON.parse(localStorage.getItem('security_check_data') || '[]');
             }
+            
+            // 병합된 데이터 사용
+            const data = getMergedData();
 
             // 선택된 날짜의 데이터만 필터링
             const filtered = data.filter(i => {
-                if (!i.checkDate) return false;
-                
-                let itemDateStr = String(i.checkDate).trim();
-                let finalDate = "";
-
-                // ISO 형식(T 포함)인 경우 현지 시간대로 변환 시도
-                if (itemDateStr.includes('T') || itemDateStr.includes('Z')) {
-                    try {
-                        const dObj = new Date(itemDateStr);
-                        if (!isNaN(dObj.getTime())) {
-                            const y = dObj.getFullYear();
-                            const m = String(dObj.getMonth() + 1).padStart(2, '0');
-                            const d = String(dObj.getDate()).padStart(2, '0');
-                            finalDate = `${y}-${m}-${d}`;
-                        }
-                    } catch(e) {}
-                }
-
-                if (!finalDate) {
-                    // 기존 문자열 처리 및 구분자 통일
-                    let temp = itemDateStr.split('T')[0].split(' ')[0];
-                    temp = temp.replace(/\. /g, '-').replace(/\./g, '-').replace(/\//g, '-').replace(/ /g, '-');
-                    if (temp.endsWith('-')) temp = temp.slice(0, -1);
-                    
-                    const parts = temp.split('-');
-                    if (parts.length === 3) {
-                        const y = parts[0];
-                        const m = parts[1].padStart(2, '0');
-                        const d = parts[2].padStart(2, '0');
-                        finalDate = `${y}-${m}-${d}`;
-                    } else {
-                        finalDate = temp;
-                    }
-                }
-                
+                const finalDate = getYYYYMMDD(i.checkDate);
                 const dateMatches = (finalDate === selectedDate);
                 if (dateMatches) {
                     console.log(`[날짜 일치] ${i.department} (제출일: ${finalDate})`);
@@ -864,12 +909,12 @@
             list.innerHTML = '';
             let completedCount = 0;
             const totalCount = FLOORS.length;
-            
+
             // 모든 층을 순회하며 데이터 유무 확인 및 렌더링
             FLOORS.forEach(floor => {
                 const tr = document.createElement('tr');
                 const targetDept = String(floor).replace(/\s/g, '');
-                
+
                 // 해당 층의 최신 데이터 찾기
                 const item = [...filtered].reverse().find(i => {
                     return String(i.department || '').replace(/\s/g, '') === targetDept;
@@ -1109,19 +1154,19 @@
             if (GAS_URL && !GAS_URL.includes('YOUR_GAS_WEB_APP_URL_HERE')) {
                 try {
                     // action: 'overwrite', oldId: currentId 를 포함하여 전송
-                    const submission = { 
-                        ...updatedItem, 
-                        action: 'overwrite', 
-                        oldId: currentId 
+                    const submission = {
+                        ...updatedItem,
+                        action: 'overwrite',
+                        oldId: currentId
                     };
-                    
+
                     fetch(GAS_URL, {
                         method: 'POST',
                         mode: 'no-cors',
                         headers: { 'Content-Type': 'text/plain' },
                         body: JSON.stringify(submission)
                     });
-                    
+
                     // 관리자 페이지 내부 캐시(cachedData)도 즉시 반영
                     const cacheIdx = cachedData.findIndex(i => i.id === currentId);
                     if (cacheIdx !== -1) {
@@ -1176,7 +1221,7 @@
             const mm = String(today.getMonth() + 1).padStart(2, '0');
             const dd = String(today.getDate()).padStart(2, '0');
             const todayStr = `${yyyy}-${mm}-${dd}`;
-            
+
             const lastWeek = new Date(today.getTime() - 6 * 24 * 60 * 60 * 1000);
             const lw_yyyy = lastWeek.getFullYear();
             const lw_mm = String(lastWeek.getMonth() + 1).padStart(2, '0');
@@ -1186,7 +1231,7 @@
             document.getElementById('pdfStartDate').value = lwStr;
             document.getElementById('pdfEndDate').value = todayStr;
             document.getElementById('pdfFloorSelector').value = '1층';
-            
+
             document.getElementById('pdfOptionsModal').style.display = 'flex';
         }
 
@@ -1206,12 +1251,12 @@
 
             try {
                 preparePaginatedOfficialTable();
-                
+
                 // 생성된 테이블들을 미리보기 모달에 복사
                 const previewContent = document.getElementById('officialFormArea').innerHTML;
                 document.getElementById('pdfPreviewContent').innerHTML = `<div style="background:white; padding:30px; width:1000px; box-shadow:0 0 10px rgba(0,0,0,0.5);">${previewContent}</div>`;
                 document.getElementById('pdfPreviewModal').style.display = 'flex';
-                
+
             } catch (e) {
                 alert('PDF 준비 중 오류가 발생했습니다: ' + e.message);
                 console.error(e);
@@ -1234,12 +1279,12 @@
 
             try {
                 preparePaginatedOfficialTable();
-                
+
                 // 테이블 렌더링을 위해 약간의 지연 후 인쇄 실행
                 setTimeout(() => {
                     window.print();
                 }, 300);
-                
+
             } catch (e) {
                 alert('PDF 준비 중 오류가 발생했습니다: ' + e.message);
                 console.error(e);
@@ -1255,7 +1300,7 @@
         }
 
         function preparePaginatedOfficialTable() {
-            const data = (cachedData && cachedData.length > 0) ? cachedData : JSON.parse(localStorage.getItem('security_check_data') || '[]');
+            const data = getMergedData();
             const targetFloor = document.getElementById('pdfFloorSelector').value;
             const startStr = document.getElementById('pdfStartDate').value;
             const endStr = document.getElementById('pdfEndDate').value;
@@ -1263,29 +1308,25 @@
             const startDate = new Date(startStr);
             const endDate = new Date(endStr);
 
+            const startYYYYMMDD = getYYYYMMDD(startStr);
+            const endYYYYMMDD = getYYYYMMDD(endStr);
+
             // 해당 부서 및 날짜 범위 내 데이터 필터링
             const filtered = data.filter(i => {
                 const deptMatch = String(i.department || '').replace(/\s/g, '') === targetFloor.replace(/\s/g, '');
                 if (!deptMatch) return false;
                 
-                const itemDateStr = String(i.checkDate || '').trim().replace(/\./g, '-');
-                const pDate = new Date(itemDateStr);
-                if (isNaN(pDate)) return false;
-                
-                // 날짜 비교 (시간 제거)
-                const checkTime = new Date(pDate.getFullYear(), pDate.getMonth(), pDate.getDate()).getTime();
-                const startTime = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate()).getTime();
-                const endTime = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate()).getTime();
-                
-                return checkTime >= startTime && checkTime <= endTime;
+                const itemDate = getYYYYMMDD(i.checkDate);
+                return itemDate >= startYYYYMMDD && itemDate <= endYYYYMMDD;
             });
 
-            // 날짜별 그룹화
+            // 날짜별 그룹화 (키를 YYYY-MM-DD로 통일)
             const grouped = {};
             filtered.forEach(item => {
-                const date = item.checkDate;
-                if (!grouped[date]) grouped[date] = { '최종퇴청자': null, '당직근무자': null };
-                grouped[date][item.checkerType] = item;
+                const dateKey = getYYYYMMDD(item.checkDate);
+                if (!dateKey) return;
+                if (!grouped[dateKey]) grouped[dateKey] = { '최종퇴청자': null, '당직근무자': null };
+                grouped[dateKey][item.checkerType] = item;
             });
 
             const area = document.getElementById('officialFormArea');
@@ -1293,7 +1334,7 @@
 
             let currentDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
             const end = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
-            
+
             let currentTbody = null;
 
             // 새로운 테이블 요소를 생성하는 헬퍼 함수
@@ -1302,7 +1343,7 @@
                 table.className = 'official-table';
                 table.style.marginBottom = '15px';
                 table.style.width = '100%';
-                
+
                 table.innerHTML = `
                 <thead>
                     <tr>
@@ -1328,17 +1369,33 @@
                         <th>당직<br>근무자</th>
                         <th>최종<br>퇴청자</th>
                         <th>당직<br>근무자</th>
+                        <!-- 최종퇴청자 세부 -->
                         <th>직급</th>
                         <th>성명</th>
                         <th>점검시간</th>
+                        <!-- 당직근무자 세부 -->
                         <th>직급</th>
                         <th>성명</th>
                         <th>점검시간</th>
+                        <!-- 결재 세부 -->
                         <th>담당</th>
                         <th>팀장</th>
                         <th>부장</th>
                     </tr>
                 </thead>
+                <tfoot>
+                    <tr>
+                        <td colspan="19" style="text-align:left; padding:10px 0; border:none; font-size:8pt; line-height:1.4;">
+                            <div style="margin-bottom: 3px;">* 점검사항별로 이상이 있을 때에는 X표, 이상이 없을 때에는 O표를 한다.</div>
+                            <div style="margin-bottom: 3px;">* 점검결과 이상이 있을 때에는 비고란에 그 내용을 기재한다.</div>
+                            <div style="margin-top: 8px;">주1) 화재단속상태: 배선 주위에 인화물질이 있는지 여부 확인</div>
+                            <div>주2) 소등 및 각종 전원상태: 컴퓨터/프린터/복사기/선풍기 및 전열기(커피포트/전기히터 등)의 전원스위치 차단 여부 확인</div>
+                            <div>주3) 서류보관/잠금장치상태: 책상 위 서류방치 여부, 캐비닛 및 서랍장의 잠금 여부 확인</div>
+                            <div>주4) 문단속상태: 외부와 통하는 창문, 출입문 등의 잠금 여부 확인</div>
+                            <div style="margin-top: 5px;">주5) 「당직 및 비상근무 규칙」 제5조제4항에 따라 당직근무자를 두지 않는 경우 당직근무자란은 기록을 생략한다.</div>
+                        </td>
+                    </tr>
+                </tfoot>
                 `;
                 const tbody = document.createElement('tbody');
                 table.appendChild(tbody);
@@ -1357,21 +1414,18 @@
                 const mm = String(currentDate.getMonth() + 1).padStart(2, '0');
                 const dd = String(currentDate.getDate()).padStart(2, '0');
                 const targetDateStr = `${yyyy}-${mm}-${dd}`;
-                
+
                 // 데이터 찾기
                 let dayData = grouped[targetDateStr];
+                // 추가 백업 매칭 (필요 시)
                 if (!dayData) {
-                    // YYYY. MM. DD. 형식 등 다양한 포맷 지원
-                    const foundKey = Object.keys(grouped).find(k => {
-                        const d = new Date(String(k).replace(/\./g, '-'));
-                        return d.getFullYear() === yyyy && d.getMonth()+1 === Number(mm) && d.getDate() === Number(dd);
-                    });
-                    if (foundKey) dayData = grouped[foundKey];
+                    const altKey = Object.keys(grouped).find(k => getYYYYMMDD(k) === targetDateStr);
+                    if (altKey) dayData = grouped[altKey];
                 }
 
                 const tr = document.createElement('tr');
                 const dayStr = `${Number(mm)}.${Number(dd)}.(${'일월화수목금토'[currentDate.getDay()]})<br><span style="font-size:0.7rem; color:#555;">${targetFloor}</span>`;
-                
+
                 if (dayData) {
                     const getVal = (type, itemKey) => {
                         const submission = dayData[type];
@@ -1385,15 +1439,15 @@
                         if (infoKey === 'time') {
                             const timeStr = submission.submitTime || submission.id;
                             if (!timeStr) return '';
-                            try { return new Date(timeStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }); } 
+                            try { return new Date(timeStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }); }
                             catch { return String(timeStr).substring(11, 16); }
                         }
                         if (infoKey === 'sig' && submission.signature) {
-                             return `<img src="${submission.signature}" style="max-height:20px;">`;
+                            return `<img src="${submission.signature}" style="max-height:20px;">`;
                         }
                         return submission[infoKey] || '';
                     };
-                    
+
                     tr.innerHTML = `
                         <td class="font-bold" style="line-height:1.2;">${dayStr}</td>
                         <!-- 화재 -->
@@ -1433,20 +1487,6 @@
                 // 다음 날
                 currentDate.setDate(currentDate.getDate() + 1);
             }
-
-            // 하단 안내 문구 추가
-            const footer = document.createElement('div');
-            footer.className = 'print-footer';
-            footer.innerHTML = `
-                <div style="margin-bottom: 5px;">* 점검사항별로 이상이 있을 때에는 X표, 이상이 없을 때에는 O표를 한다.</div>
-                <div style="margin-bottom: 5px;">* 점검결과 이상이 있을 때에는 비고란에 그 내용을 기재한다.</div>
-                <div style="margin-top: 10px;">주1) 화재단속상태: 배선 주위에 인화물질이 있는지 여부 확인</div>
-                <div>주2) 소등 및 각종 전원상태: 컴퓨터/프린터/복사기/선풍기 및 전열기(커피포트/전기히터 등)의 전원스위치 차단 여부 확인</div>
-                <div>주3) 서류보관/잠금장치상태: 책상 위 서류방치 여부, 캐비닛 및 서랍장의 잠금 여부 확인</div>
-                <div>주4) 문단속상태: 외부와 통하는 창문, 출입문 등의 잠금 여부 확인</div>
-                <div style="margin-top: 5px;">주5) 「당직 및 비상근무 규칙」 제5조제4항에 따라 당직근무자를 두지 않는 경우 당직근무자란은 기록물 생략한다.</div>
-            `;
-            area.appendChild(footer);
         }
 
 
