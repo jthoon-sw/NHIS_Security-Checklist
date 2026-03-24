@@ -742,7 +742,7 @@
             </div>
             <div style="display: flex; justify-content: center; gap: 10px; margin-top:30px;">
                 <button class="btn btn-outline" style="flex:1;" onclick="document.getElementById('pdfOptionsModal').style.display='none'">취소</button>
-                <button class="btn btn-blue" style="flex:1; font-weight:bold;" onclick="generatePDFPreview()">미리보기 화면 생성</button>
+                <button class="btn btn-blue" style="flex:1; font-weight:bold;" onclick="directPDFExport()">PDF 저장/인쇄</button>
             </div>
         </div>
     </div>
@@ -1186,6 +1186,34 @@
                 const previewContent = document.getElementById('officialFormArea').innerHTML;
                 document.getElementById('pdfPreviewContent').innerHTML = `<div style="background:white; padding:30px; width:1000px; box-shadow:0 0 10px rgba(0,0,0,0.5);">${previewContent}</div>`;
                 document.getElementById('pdfPreviewModal').style.display = 'flex';
+                
+            } catch (e) {
+                alert('PDF 준비 중 오류가 발생했습니다: ' + e.message);
+                console.error(e);
+            }
+        }
+
+        function directPDFExport() {
+            const startStr = document.getElementById('pdfStartDate').value;
+            const endStr = document.getElementById('pdfEndDate').value;
+            if (!startStr || !endStr) {
+                alert('인쇄 기간을 선택해주세요.');
+                return;
+            }
+            if (new Date(startStr) > new Date(endStr)) {
+                alert('시작일이 종료일보다 늦을 수 없습니다.');
+                return;
+            }
+
+            document.getElementById('pdfOptionsModal').style.display = 'none';
+
+            try {
+                preparePaginatedOfficialTable();
+                
+                // 테이블 렌더링을 위해 약간의 지연 후 인쇄 실행
+                setTimeout(() => {
+                    window.print();
+                }, 300);
                 
             } catch (e) {
                 alert('PDF 준비 중 오류가 발생했습니다: ' + e.message);
