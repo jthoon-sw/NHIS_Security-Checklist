@@ -420,24 +420,26 @@
         .official-table td {
             border: 1px solid #000;
             font-size: 8pt;
-            padding: 4px 2px;
+            padding: 2px 2px;
             text-align: center;
-            height: 35px;
+            height: 28px;
             white-space: nowrap;
             overflow: hidden;
             color: #000;
         }
 
         .official-table th {
-            background: #f2f2f2;
+            background: #fff !important;
             font-weight: 700;
             height: 25px;
+            color: #000 !important;
         }
 
         .diagonal-cell {
             position: relative;
             width: 80px;
             height: 50px !important;
+            background: #fff !important;
         }
 
         .diag-line {
@@ -449,19 +451,11 @@
             background: linear-gradient(to top right, transparent calc(50% - 0.5px), #000, transparent calc(50% + 0.5px));
         }
 
-        .diag-text-top {
-            position: absolute;
-            top: 4px;
-            right: 8px;
+        .diag-text {
             font-weight: 700;
+            font-size: 9pt;
         }
 
-        .diag-text-bottom {
-            position: absolute;
-            bottom: 4px;
-            left: 8px;
-            font-weight: 700;
-        }
 
         .bg-gray-light {
             background: #fafafa;
@@ -534,6 +528,25 @@
             display: flex;
             justify-content: space-between;
         }
+
+        /* 하단 안내 문구 스타일 */
+        .print-footer {
+            display: none;
+            margin-top: 10px;
+            font-size: 8pt;
+            line-height: 1.4;
+            color: #000;
+            text-align: left;
+            border-top: 1px solid #000;
+            padding-top: 8px;
+        }
+
+        @media print {
+            .print-footer {
+                display: block !important;
+            }
+        }
+
     </style>
 </head>
 
@@ -588,9 +601,9 @@
                 <tr>
                     <th rowspan="2" class="diagonal-cell">
                         <div class="diag-line"></div>
-                        <span class="diag-text-top">월</span>
-                        <span class="diag-text-bottom">일</span>
+                        <span class="diag-text">월/일</span>
                     </th>
+
                     <th colspan="2">화재 단속<br>상태</th>
                     <th colspan="2">소등 및 각종<br>전원 상태</th>
                     <th colspan="2">서류보관<br>/잠금장치 상태</th>
@@ -1287,7 +1300,7 @@
             const createNewTable = () => {
                 const table = document.createElement('table');
                 table.className = 'official-table';
-                table.style.marginBottom = '30px';
+                table.style.marginBottom = '15px';
                 table.style.width = '100%';
                 
                 table.innerHTML = `
@@ -1295,8 +1308,7 @@
                     <tr>
                         <th rowspan="2" class="diagonal-cell">
                             <div class="diag-line"></div>
-                            <span class="diag-text-top">월</span>
-                            <span class="diag-text-bottom">일</span>
+                            <span class="diag-text">월/일</span>
                         </th>
                         <th colspan="2">화재 단속<br>상태</th>
                         <th colspan="2">소등 및 각종<br>전원 상태</th>
@@ -1421,7 +1433,22 @@
                 // 다음 날
                 currentDate.setDate(currentDate.getDate() + 1);
             }
+
+            // 하단 안내 문구 추가
+            const footer = document.createElement('div');
+            footer.className = 'print-footer';
+            footer.innerHTML = `
+                <div style="margin-bottom: 5px;">* 점검사항별로 이상이 있을 때에는 X표, 이상이 없을 때에는 O표를 한다.</div>
+                <div style="margin-bottom: 5px;">* 점검결과 이상이 있을 때에는 비고란에 그 내용을 기재한다.</div>
+                <div style="margin-top: 10px;">주1) 화재단속상태: 배선 주위에 인화물질이 있는지 여부 확인</div>
+                <div>주2) 소등 및 각종 전원상태: 컴퓨터/프린터/복사기/선풍기 및 전열기(커피포트/전기히터 등)의 전원스위치 차단 여부 확인</div>
+                <div>주3) 서류보관/잠금장치상태: 책상 위 서류방치 여부, 캐비닛 및 서랍장의 잠금 여부 확인</div>
+                <div>주4) 문단속상태: 외부와 통하는 창문, 출입문 등의 잠금 여부 확인</div>
+                <div style="margin-top: 5px;">주5) 「당직 및 비상근무 규칙」 제5조제4항에 따라 당직근무자를 두지 않는 경우 당직근무자란은 기록물 생략한다.</div>
+            `;
+            area.appendChild(footer);
         }
+
 
 
 
