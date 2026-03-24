@@ -639,14 +639,16 @@
             <tbody id="officialBody"></tbody>
             <tfoot>
                 <tr>
-                    <td colspan="19" style="text-align:left; padding:10px 0; border:none; font-size:8pt; line-height:1.4;">
+                    <td colspan="19"
+                        style="text-align:left; padding:10px 0; border:none; font-size:8pt; line-height:1.4;">
                         <div style="margin-bottom: 3px;">* 점검사항별로 이상이 있을 때에는 X표, 이상이 없을 때에는 O표를 한다.</div>
                         <div style="margin-bottom: 3px;">* 점검결과 이상이 있을 때에는 비고란에 그 내용을 기재한다.</div>
                         <div style="margin-top: 8px;">주1) 화재단속상태: 배선 주위에 인화물질이 있는지 여부 확인</div>
                         <div>주2) 소등 및 각종 전원상태: 컴퓨터/프린터/복사기/선풍기 및 전열기(커피포트/전기히터 등)의 전원스위치 차단 여부 확인</div>
                         <div>주3) 서류보관/잠금장치상태: 책상 위 서류방치 여부, 캐비닛 및 서랍장의 잠금 여부 확인</div>
                         <div>주4) 문단속상태: 외부와 통하는 창문, 출입문 등의 잠금 여부 확인</div>
-                        <div style="margin-top: 5px;">주5) 「당직 및 비상근무 규칙」 제5조제4항에 따라 당직근무자를 두지 않는 경우 당직근무자란은 기록을 생략한다.</div>
+                        <div style="margin-top: 5px;">주5) 「당직 및 비상근무 규칙」 제5조제4항에 따라 당직근무자를 두지 않는 경우 당직근무자란은 기록을 생략한다.
+                        </div>
                     </td>
                 </tr>
             </tfoot>
@@ -834,7 +836,7 @@
                 return `${y}-${m}-${d}`;
             }
             let s = String(dVal).trim();
-            
+
             // ISO 8601 포맷 처리 (T 또는 Z 포함 시)
             if (s.includes('T') || s.includes('Z')) {
                 try {
@@ -845,12 +847,12 @@
                         const d = String(dObj.getDate()).padStart(2, '0');
                         return `${y}-${m}-${d}`;
                     }
-                } catch(e) {}
+                } catch (e) { }
             }
 
             // 일반 문자열 처리 (. / - 공백 등)
             s = s.replace(/\. /g, '-').replace(/\./g, '-').replace(/\//g, '-').replace(/ /g, '-');
-            const parts = s.split('-').filter(p => /^\d+$/.test(p)); 
+            const parts = s.split('-').filter(p => /^\d+$/.test(p));
             if (parts.length >= 3) {
                 let y = parts[0];
                 if (y.length === 2) y = "20" + y; // 2자리 연도 보정
@@ -878,7 +880,7 @@
         async function renderRecords(forceRefresh = false) {
             const selectedDate = document.getElementById('dateSelector').value;
             const list = document.getElementById('recordList');
-            
+
             if (GAS_URL && !GAS_URL.includes('YOUR_GAS_WEB_APP_URL_HERE')) {
                 if (forceRefresh || cachedData.length === 0) {
                     list.innerHTML = '<tr><td colspan="5" style="padding:40px;">데이터를 불러오는 중입니다...</td></tr>';
@@ -892,7 +894,7 @@
                     }
                 }
             }
-            
+
             // 병합된 데이터 사용
             const data = getMergedData();
 
@@ -1315,7 +1317,7 @@
             const filtered = data.filter(i => {
                 const deptMatch = String(i.department || '').replace(/\s/g, '') === targetFloor.replace(/\s/g, '');
                 if (!deptMatch) return false;
-                
+
                 const itemDate = getYYYYMMDD(i.checkDate);
                 return itemDate >= startYYYYMMDD && itemDate <= endYYYYMMDD;
             });
@@ -1430,17 +1432,25 @@
                     const getVal = (type, itemKey) => {
                         const submission = dayData[type];
                         if (!submission) return '';
-                        return submission.items[itemKey]?.value || '';
+                        const val = submission.items[itemKey]?.value || '';
+                        if (val === '양호') return 'O';
+                        if (val === '불량') return 'X';
+                        return val;
                     };
 
                     const getInfo = (type, infoKey) => {
                         const submission = dayData[type];
                         if (!submission) return '';
                         if (infoKey === 'time') {
-                            const timeStr = submission.submitTime || submission.id;
-                            if (!timeStr) return '';
-                            try { return new Date(timeStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }); }
-                            catch { return String(timeStr).substring(11, 16); }
+                            const d = new Date(Number(submission.id));
+                            if (!isNaN(d.getTime())) {
+                                const hh = String(d.getHours()).padStart(2, '0');
+                                const min = String(d.getMinutes()).padStart(2, '0');
+                                return `${hh}:${min}`;
+                            }
+                            // 날짜 객체 변환 실패 시 submitTime에서 시간 추출 시도
+                            const timeMatch = String(submission.submitTime || '').match(/\d{1,2}:\d{2}/);
+                            return timeMatch ? timeMatch[0] : '';
                         }
                         if (infoKey === 'sig' && submission.signature) {
                             return `<img src="${submission.signature}" style="max-height:20px;">`;
