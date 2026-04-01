@@ -664,6 +664,10 @@
                 <div style="display:flex; flex-direction:column; gap:12px;">
                     <button class="btn btn-outline" style="padding:15px;" onclick="showSigFromAction()">서명 확대
                         보기</button>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+                        <button class="btn btn-outline" style="padding:15px; background:#fffdec; border-color:#e6a23c; font-size:0.8rem;" onclick="openApprovalSig('manager')">담당 서명하기</button>
+                        <button class="btn btn-outline" style="padding:15px; background:#ebf5ff; border-color:#409eff; font-size:0.8rem;" onclick="openApprovalSig('leader')">팀장 서명하기</button>
+                    </div>
                     <button class="btn btn-red" style="padding:15px;" onclick="openEditFromAction()">데이터 수정하기</button>
                     <button class="btn btn-gray" style="padding:15px;" onclick="delFromAction()">기록 삭제하기</button>
                 </div>
@@ -1069,20 +1073,76 @@
                     alert('서명을 해주세요.');
                     return;
                 }
-                currentEditingSig = modalCanvas.toDataURL();
-                editSigPreviewImg.src = currentEditingSig;
-                editSigPreviewImg.style.display = 'block';
-                editSigHint.style.display = 'none';
+                const dataUrl = modalCanvas.toDataURL();
+                
+                if (sigMode === 'edit') {
+                    currentEditingSig = dataUrl;
+                    editSigPreviewImg.src = currentEditingSig;
+                    editSigPreviewImg.style.display = 'block';
+                    editSigHint.style.display = 'none';
+                } else if (sigMode === 'manager' || sigMode === 'leader') {
+                    saveApprovalSignature(sigMode, dataUrl);
+                }
+                
                 sigModal.style.display = 'none';
                 document.body.style.overflow = '';
             });
 
             editSigPreviewArea.addEventListener('click', () => {
+                sigMode = 'edit';
                 sigModal.style.display = 'flex';
                 document.body.style.overflow = 'hidden';
                 modalCtx.clearRect(0, 0, modalCanvas.width, modalCanvas.height);
                 hasSignature = false;
             });
+        }
+
+        let sigMode = 'edit'; // 'edit', 'manager', 'leader'
+        function openApprovalSig(type) {
+            sigMode = type;
+            sigModal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+            modalCtx.clearRect(0, 0, modalCanvas.width, modalCanvas.height);
+            hasSignature = false;
+        }
+
+        async function saveApprovalSignature(type, dataUrl) {
+            const data = JSON.parse(localStorage.getItem('security_check_data') || '[]');
+            const idx = data.findIndex(i => i.id === currentItem.id);
+            if (idx === -1) return;
+
+            const updatedItem = { ...data[idx] };
+            if (type === 'manager') updatedItem.managerSignature = dataUrl;
+            if (type === 'leader') updatedItem.leaderSignature = dataUrl;
+
+            // 로컬 스토리지 업데이트
+            data[idx] = updatedItem;
+            localStorage.setItem('security_check_data', JSON.stringify(data));
+
+            // 구글 드라이브(GAS) 업데이트
+            if (GAS_URL && !GAS_URL.includes('YOUR_GAS_WEB_APP_URL_HERE')) {
+                try {
+                    const submission = {
+                        ...updatedItem,
+                        action: 'overwrite',
+                        oldId: currentItem.id
+                    };
+                    fetch(GAS_URL, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'text/plain' },
+                        body: JSON.stringify(submission)
+                    });
+                    
+                    // 캐시 업데이트 (관리자 페이지 내부 즉시 반영용)
+                    if (typeof cachedData !== 'undefined') {
+                        const cIdx = cachedData.findIndex(i => i.id === currentItem.id);
+                        if (cIdx !== -1) cachedData[cIdx] = updatedItem;
+                    }
+                } catch (err) { console.error('Approval sync error:', err); }
+            }
+            alert('서명이 저장되었습니다.');
+            location.reload();
         }
 
         function openEdit(id) {
@@ -1485,7 +1545,8 @@
                         <td>${getInfo('당직근무자', 'sig') || getInfo('당직근무자', 'userName')}</td>
                         <td>${getInfo('당직근무자', 'time')}</td>
                         <!-- 결재 -->
-                        <td></td><td></td>
+                        <td>${submission.managerSignature ? `<img src="${submission.managerSignature}" style="max-height:28px;">` : ''}</td>
+                        <td>${submission.leaderSignature ? `<img src="${submission.leaderSignature}" style="max-height:28px;">` : ''}</td>
                     `;
                 } else {
                     tr.innerHTML = `
