@@ -362,6 +362,8 @@
             .btn-group,
             .stats-bar,
             .admin-header,
+            .stats-bar,
+            #statusCount,
             .table-area,
             .storage-monitor,
             #modal,
@@ -614,7 +616,7 @@
                     <th rowspan="2" style="width:30px;">비고</th>
                     <th colspan="3">최종퇴청자</th>
                     <th colspan="3">당직근무자</th>
-                    <th colspan="3">결 재</th>
+                    <th colspan="2">결 재</th>
                 </tr>
                 <tr>
                     <th>최종<br>퇴청자</th>
@@ -633,13 +635,12 @@
                     <th>점검시간</th>
                     <th>담당</th>
                     <th>팀장</th>
-                    <th>부장</th>
                 </tr>
             </thead>
             <tbody id="officialBody"></tbody>
             <tfoot>
                 <tr>
-                    <td colspan="19"
+                    <td colspan="18"
                         style="text-align:left; padding:10px 0; border:none; font-size:8pt; line-height:1.4;">
                         <div style="margin-bottom: 3px;">* 점검사항별로 이상이 있을 때에는 X표, 이상이 없을 때에는 O표를 한다.</div>
                         <div style="margin-bottom: 3px;">* 점검결과 이상이 있을 때에는 비고란에 그 내용을 기재한다.</div>
@@ -866,11 +867,11 @@
         // 데이터 병합 헬퍼 함수
         function getMergedData() {
             const localData = JSON.parse(localStorage.getItem('security_check_data') || '[]');
-            const combined = [...cachedData];
-            localData.forEach(lItem => {
-                // ID(타임스탬프)를 기준으로 중복 제거하며 병합
-                if (!combined.find(cItem => Number(cItem.id) === Number(lItem.id))) {
-                    combined.push(lItem);
+            const combined = [...localData];
+            cachedData.forEach(cItem => {
+                // ID(타임스탬프)를 기준으로 중복 제거하며 병합 (로컬 데이터 우선)
+                if (!combined.find(lItem => Number(lItem.id) === Number(cItem.id))) {
+                    combined.push(cItem);
                 }
             });
             // 최신순 정렬 (ID 내림차순)
@@ -1104,7 +1105,12 @@
             document.getElementById('edit_submitTime').value = `${yyyy}-${mm}-${dd}T${hh}:${min}`;
             document.getElementById('edit_department').value = item.department || '';
             document.getElementById('edit_checkerType').value = item.checkerType || (item.items.item1?.type || '최종퇴청자');
-            document.getElementById('edit_position').value = item.position || '';
+            
+            // 직급이 "1" 또는 "1급" 형식일 수 있으므로 숫자만 추출하여 처리
+            let posVal = String(item.position || '');
+            if (posVal.includes('급')) posVal = posVal.replace('급', '');
+            document.getElementById('edit_position').value = posVal;
+            
             document.getElementById('edit_userName').value = item.userName || '';
 
             currentEditingSig = item.signature;
@@ -1360,7 +1366,7 @@
                         <th rowspan="2" style="width:30px;">비고</th>
                         <th colspan="3">최종퇴청자</th>
                         <th colspan="3">당직근무자</th>
-                        <th colspan="3">결 재</th>
+                        <th colspan="2">결 재</th>
                     </tr>
                     <tr>
                         <th>최종<br>퇴청자</th>
@@ -1382,12 +1388,11 @@
                         <!-- 결재 세부 -->
                         <th>담당</th>
                         <th>팀장</th>
-                        <th>부장</th>
                     </tr>
                 </thead>
                 <tfoot>
                     <tr>
-                        <td colspan="19" style="text-align:left; padding:10px 0; border:none; font-size:8pt; line-height:1.4;">
+                        <td colspan="18" style="text-align:left; padding:10px 0; border:none; font-size:8pt; line-height:1.4;">
                             <div style="margin-bottom: 3px;">* 점검사항별로 이상이 있을 때에는 X표, 이상이 없을 때에는 O표를 한다.</div>
                             <div style="margin-bottom: 3px;">* 점검결과 이상이 있을 때에는 비고란에 그 내용을 기재한다.</div>
                             <div style="margin-top: 8px;">주1) 화재단속상태: 배선 주위에 인화물질이 있는지 여부 확인</div>
@@ -1474,15 +1479,15 @@
                         <td>${getVal('당직근무자', 'item4')}</td>
                         <td></td>
                         <!-- 최종퇴청자 -->
-                        <td>${getInfo('최종퇴청자', 'position')}</td>
+                        <td>${getInfo('최종퇴청자', 'position')}${getInfo('최종퇴청자', 'position') ? '급' : ''}</td>
                         <td>${getInfo('최종퇴청자', 'sig') || getInfo('최종퇴청자', 'userName')}</td>
                         <td>${getInfo('최종퇴청자', 'time')}</td>
                         <!-- 당직근무자 -->
-                        <td>${getInfo('당직근무자', 'position')}</td>
+                        <td>${getInfo('당직근무자', 'position')}${getInfo('당직근무자', 'position') ? '급' : ''}</td>
                         <td>${getInfo('당직근무자', 'sig') || getInfo('당직근무자', 'userName')}</td>
                         <td>${getInfo('당직근무자', 'time')}</td>
                         <!-- 결재 -->
-                        <td></td><td>전결</td><td></td>
+                        <td></td><td>전결</td>
                     `;
                 } else {
                     tr.innerHTML = `
