@@ -1521,6 +1521,12 @@
                         return submission[infoKey] || '';
                     };
 
+                    // 4/1 추가: 최종퇴청자 및 당직근무자 데이터에서 담당/팀장 서명을 각각 수집
+                    const mSig = (dayData['최종퇴청자'] && dayData['최종퇴청자'].managerSignature) || 
+                                 (dayData['당직근무자'] && dayData['당직근무자'].managerSignature) || '';
+                    const lSig = (dayData['최종퇴청자'] && dayData['최종퇴청자'].leaderSignature) || 
+                                 (dayData['당직근무자'] && dayData['당직근무자'].leaderSignature) || '';
+
                     tr.innerHTML = `
                         <td class="font-bold" style="line-height:1.2;">${dayStr}</td>
                         <!-- 화재 -->
@@ -1545,8 +1551,8 @@
                         <td>${getInfo('당직근무자', 'sig') || getInfo('당직근무자', 'userName')}</td>
                         <td>${getInfo('당직근무자', 'time')}</td>
                         <!-- 결재 -->
-                        <td>${submission.managerSignature ? `<img src="${submission.managerSignature}" style="max-height:28px;">` : ''}</td>
-                        <td>${submission.leaderSignature ? `<img src="${submission.leaderSignature}" style="max-height:28px;">` : ''}</td>
+                        <td>${mSig ? `<img src="${mSig}" style="max-height:28px;">` : ''}</td>
+                        <td>${lSig ? `<img src="${lSig}" style="max-height:28px;">` : ''}</td>
                     `;
                 } else {
                     tr.innerHTML = `
