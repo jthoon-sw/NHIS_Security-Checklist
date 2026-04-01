@@ -424,7 +424,7 @@
             font-size: 8pt;
             padding: 2px 2px;
             text-align: center;
-            height: 28px;
+            height: 32px;
             white-space: nowrap;
             overflow: hidden;
             color: #000;
@@ -604,9 +604,8 @@
         <table class="official-table">
             <thead>
                 <tr>
-                    <th rowspan="2" class="diagonal-cell">
-                        <div class="diag-line"></div>
-                        <span class="diag-text">월/일</span>
+                    <th rowspan="2">
+                        <span>월/일</span>
                     </th>
 
                     <th colspan="2">화재 단속<br>상태</th>
@@ -1355,9 +1354,8 @@
                 table.innerHTML = `
                 <thead>
                     <tr>
-                        <th rowspan="2" class="diagonal-cell">
-                            <div class="diag-line"></div>
-                            <span class="diag-text">월/일</span>
+                        <th rowspan="2">
+                            <span>월/일</span>
                         </th>
                         <th colspan="2">화재 단속<br>상태</th>
                         <th colspan="2">소등 및 각종<br>전원 상태</th>
@@ -1458,7 +1456,7 @@
                             return timeMatch ? timeMatch[0] : '';
                         }
                         if (infoKey === 'sig' && submission.signature) {
-                            return `<img src="${submission.signature}" style="max-height:20px;">`;
+                            return `<img src="${submission.signature}" style="max-height:28px;">`;
                         }
                         return submission[infoKey] || '';
                     };
@@ -1487,12 +1485,12 @@
                         <td>${getInfo('당직근무자', 'sig') || getInfo('당직근무자', 'userName')}</td>
                         <td>${getInfo('당직근무자', 'time')}</td>
                         <!-- 결재 -->
-                        <td></td><td>전결</td>
+                        <td></td><td></td>
                     `;
                 } else {
                     tr.innerHTML = `
                         <td class="font-bold" style="line-height:1.2;">${dayStr}</td>
-                        <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+                        <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
                         <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
                     `;
                 }
