@@ -916,10 +916,19 @@
                 submitBtn.disabled = true;
                 submitBtn.innerText = '확인 중...';
 
+                // [추가] 타임아웃 헬퍼 함수
+                const fetchWithTimeout = (url, options, timeout = 5000) => {
+                    return Promise.race([
+                        fetch(url, options),
+                        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), timeout))
+                    ]);
+                };
+
                 // [추가] 중복 데이터 확인 (구글 드라이브 연동 시)
                 if (GAS_URL && !GAS_URL.includes('YOUR_GAS_WEB_APP_URL_HERE')) {
                     try {
-                        const checkResp = await fetch(`${GAS_URL}?t=${Date.now()}`); 
+                        // 중복 체크는 3초 이내에 끝나지 않으면 스킵하고 제출 진행
+                        const checkResp = await fetchWithTimeout(`${GAS_URL}?t=${Date.now()}`, {}, 3000); 
                         const allData = await checkResp.json();
                         
                         // 날짜 및 부서 매칭 (공백 제거 및 시간대 보정)
@@ -947,18 +956,15 @@
                             
                             // 2. 일반 문자열 처리 (예: 2024. 3. 21. 또는 2024-03-21)
                             if (!sheetDateFormatted) {
-                                // 모든 구분자(. / - 공백)를 하이픈으로 통일하고 불필요한 공백 제거
                                 let temp = itemDateStr.split('T')[0].split(' ')[0]
-                                    .replace(/\.\s?/g, '-') // "2024. 3. 21." -> "2024-3-21-"
+                                    .replace(/\.\s?/g, '-') 
                                     .replace(/\/\s?/g, '-')
                                     .replace(/\s/g, '-');
                                 
-                                // 끝에 붙은 하이픈 제거
                                 while(temp.endsWith('-')) temp = temp.slice(0, -1);
                                 
                                 const parts = temp.split('-').filter(p => p !== "");
                                 if (parts.length === 3) {
-                                    // 연도가 2자리인 경우(예: 24-03-21) 처리 (선택사항, 보통 4자리임)
                                     let y = parts[0];
                                     if (y.length === 2) y = "20" + y; 
                                     sheetDateFormatted = `${y}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
@@ -974,7 +980,7 @@
                             submission.oldId = existing.id;
                         }
                     } catch (e) {
-                        console.warn('중복 체크 실패:', e);
+                        console.warn('중복 체크 건너뜀 (타임아웃 또는 오류):', e);
                     }
                 }
 
@@ -987,23 +993,27 @@
 
                 // Google Apps Script로 전송
                 if (GAS_URL && !GAS_URL.includes('YOUR_GAS_WEB_APP_URL_HERE')) {
-                    fetch(GAS_URL, {
-                        method: 'POST',
-                        mode: 'no-cors',
-                        headers: { 'Content-Type': 'text/plain' }, // no-cors 환경에서 더 안정적인 전송을 위해 text/plain 사용
-                        body: JSON.stringify(submission)
-                    })
-                        .then(() => {
-                            alert(`성공적으로 제출되었습니다.\n제출일시: ${submission.submitTime}`);
-                            location.reload();
-                        })
-                        .catch(err => {
-                            console.error('Error:', err);
-                            alert('구글 드라이브 전송 중 오류가 발생했습니다. 로컬 스토리지에만 저장되었습니다.');
-                            location.reload();
-                        });
+                    try {
+                        // 전송은 6초 타임아웃 설정
+                        await fetchWithTimeout(GAS_URL, {
+                            method: 'POST',
+                            mode: 'no-cors',
+                            headers: { 'Content-Type': 'text/plain' },
+                            body: JSON.stringify(submission)
+                        }, 6000);
+                        
+                        alert(`성공적으로 제출되었습니다.\n제출일시: ${submission.submitTime}`);
+                        location.reload();
+                    } catch (err) {
+                        console.error('Error:', err);
+                        const msg = err.message === 'Timeout' 
+                            ? '구글 드라이브 전송 시간이 초과되었습니다. 인터넷 연결을 확인해 주세요. (로컬에는 저장됨)'
+                            : '구글 드라이브 전송 중 오류가 발생했습니다. 로컬 스토리지에만 저장되었습니다.';
+                        alert(msg);
+                        location.reload();
+                    }
                 } else {
-                    alert(`성공적으로 제출되었습니다(로컬 모드).\n제출일시: ${submission.submitTime}\n\n※ 구글 앱스 스크립트 URL이 설정되지 않아 로컬 스토리지에만 저장되었습니다.`);
+                    alert(`성공적으로 제출되었습니다(로컬 모드).\n제출일시: ${submission.submitTime}\n\n※ 구글 앱스 스크립트 웹 앱 URL이 설정되지 않아 로컬 스토리지에만 저장되었습니다.`);
                     location.reload();
                 }
             };
