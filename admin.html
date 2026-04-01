@@ -1107,13 +1107,24 @@
         }
 
         async function saveApprovalSignature(type, dataUrl) {
-            const data = JSON.parse(localStorage.getItem('security_check_data') || '[]');
-            const idx = data.findIndex(i => i.id === currentItem.id);
-            if (idx === -1) return;
+            let data = JSON.parse(localStorage.getItem('security_check_data') || '[]');
+            // ID 비교 시 문자열로 변환하여 안전하게 비교
+            let idx = data.findIndex(i => String(i.id) === String(currentItem.id));
+            
+            let updatedItem;
+            if (idx === -1) {
+                // 로컬에 해당 기록이 없으면(구글 드라이브 데이터인 경우), 현재 데이터를 기반으로 로컬에 생성
+                updatedItem = { ...currentItem };
+                data.push(updatedItem);
+                idx = data.length - 1;
+            } else {
+                updatedItem = { ...data[idx] };
+            }
 
-            const updatedItem = { ...data[idx] };
             if (type === 'manager') updatedItem.managerSignature = dataUrl;
             if (type === 'leader') updatedItem.leaderSignature = dataUrl;
+            
+            updatedItem.lastModified = Date.now(); // 수정 일시 업데이트
 
             // 로컬 스토리지 업데이트
             data[idx] = updatedItem;
