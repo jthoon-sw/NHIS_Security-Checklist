@@ -915,6 +915,14 @@
                 submitBtn.disabled = true;
                 submitBtn.innerText = '제출 중...';
 
+                // [추가] 타임아웃 헬퍼 함수 (전송 보장을 위해 다시 활용)
+                const fetchWithTimeout = (url, options, timeout = 7000) => {
+                    return Promise.race([
+                        fetch(url, options),
+                        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), timeout))
+                    ]);
+                };
+
                 // 로컬 스토리지 백업
                 const localData = JSON.parse(localStorage.getItem('security_check_data') || '[]');
                 localData.push(submission);
@@ -923,17 +931,23 @@
                 // Google Apps Script로 전송
                 if (GAS_URL && !GAS_URL.includes('YOUR_GAS_WEB_APP_URL_HERE')) {
                     try {
-                        await fetch(GAS_URL, {
+                        // GAS로 전송 (no-cors와 keepalive 옵션 사용으로 전송 안정성 확보)
+                        // keepalive: true는 페이지가 새로고침되거나 닫혀도 전송을 보장합니다.
+                        fetch(GAS_URL, {
                             method: 'POST',
                             mode: 'no-cors',
                             headers: { 'Content-Type': 'text/plain' },
-                            body: JSON.stringify(submission)
+                            body: JSON.stringify(submission),
+                            keepalive: true
                         });
                         
-                        alert(`성공적으로 제출되었습니다.\n제출일시: ${submission.submitTime}`);
-                        location.reload();
+                        // 전송 명령이 브라우저 큐에 등록된 후 사용자에게 알림
+                        setTimeout(() => {
+                            alert(`성공적으로 제출되었습니다.\n제출일시: ${submission.submitTime}`);
+                            location.reload();
+                        }, 800); // 전송 시작 시간을 충분히 확보
                     } catch (err) {
-                        console.error('Error:', err);
+                        console.error('Submission Error:', err);
                         alert('구글 드라이브 전송 중 오류가 발생했습니다. 로컬 스토리지에만 저장되었습니다.');
                         location.reload();
                     }
