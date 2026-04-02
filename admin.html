@@ -1149,12 +1149,12 @@
                         action: 'overwrite',
                         oldId: currentItem.id
                     };
-                    fetch(GAS_URL, {
-                        method: 'POST',
-                        mode: 'no-cors',
-                        headers: { 'Content-Type': 'text/plain' },
-                        body: JSON.stringify(submission)
-                    });
+                    
+                    const submitForm = document.getElementById('gas_submit_form');
+                    const submitData = document.getElementById('gas_submit_data');
+                    submitForm.action = GAS_URL;
+                    submitData.value = JSON.stringify(submission);
+                    submitForm.submit();
                     
                     // 캐시 업데이트 (관리자 페이지 내부 즉시 반영용)
                     if (typeof cachedData !== 'undefined') {

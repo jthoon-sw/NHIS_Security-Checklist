@@ -933,24 +933,20 @@
                 localData.push(submission);
                 localStorage.setItem('security_check_data', JSON.stringify(localData));
 
-                // Google Apps Script로 전송
+                // Google Apps Script로 전송 (Hidden Iframe 방식 - 모바일 호환성 극대화)
                 if (GAS_URL && !GAS_URL.includes('YOUR_GAS_WEB_APP_URL_HERE')) {
                     try {
-                        // GAS로 전송 (no-cors와 keepalive 옵션 사용으로 전송 안정성 확보)
-                        // keepalive: true는 페이지가 새로고침되거나 닫혀도 전송을 보장합니다.
-                        fetch(GAS_URL, {
-                            method: 'POST',
-                            mode: 'no-cors',
-                            headers: { 'Content-Type': 'text/plain' },
-                            body: JSON.stringify(submission),
-                            keepalive: true
-                        });
-                        
-                        // 전송 명령이 브라우저 큐에 등록된 후 사용자에게 알림
+                        const submitForm = document.getElementById('gas_submit_form');
+                        const submitData = document.getElementById('gas_submit_data');
+                        submitForm.action = GAS_URL;
+                        submitData.value = JSON.stringify(submission);
+                        submitForm.submit();
+
+                        // 전송 및 처리 시간을 고려하여 알림 지연
                         setTimeout(() => {
                             alert(`성공적으로 제출되었습니다.\n제출일시: ${submission.submitTime}`);
                             location.reload();
-                        }, 800); // 전송 시작 시간을 충분히 확보
+                        }, 1200);
                     } catch (err) {
                         console.error('Submission Error:', err);
                         alert('구글 드라이브 전송 중 오류가 발생했습니다. 로컬 스토리지에만 저장되었습니다.');
@@ -1011,6 +1007,12 @@
             });
         });
     </script>
+
+    <!-- Hidden Form for GAS Submission (for Mobile Compatibility) -->
+    <iframe name="hidden_iframe" id="hidden_iframe" style="display:none;"></iframe>
+    <form id="gas_submit_form" target="hidden_iframe" method="POST" style="display:none;">
+        <textarea name="data" id="gas_submit_data"></textarea>
+    </form>
 </body>
 
 </html>
