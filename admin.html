@@ -921,8 +921,8 @@
                 const tr = document.createElement('tr');
                 const targetDept = String(floor).replace(/\s/g, '');
 
-                // 해당 층의 최신 데이터 찾기
-                const item = [...filtered].reverse().find(i => {
+                // 해당 층의 최신 데이터 찾기 (filtered가 이미 최신순이므로 첫 번째 매칭 항목 사용)
+                const item = filtered.find(i => {
                     return String(i.department || '').replace(/\s/g, '') === targetDept;
                 });
 
@@ -1437,9 +1437,9 @@
                 if (!dateKey) return;
                 if (!grouped[dateKey]) grouped[dateKey] = { '최종퇴청자': null, '당직근무자': null };
                 
-                // 타입 매칭 시 공백 등 정제하여 정확히 할당
+                // 타입 매칭 시 공백 등 정제하여 할당 (이미 최신순이므로 먼저 할당된 데이터 유지)
                 const type = String(item.checkerType || '').trim();
-                if (type === '최종퇴청자' || type === '당직근무자') {
+                if ((type === '최종퇴청자' || type === '당직근무자') && !grouped[dateKey][type]) {
                     grouped[dateKey][type] = item;
                 }
             });
