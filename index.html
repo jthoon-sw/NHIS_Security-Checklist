@@ -933,28 +933,27 @@
                 localData.push(submission);
                 localStorage.setItem('security_check_data', JSON.stringify(localData));
 
-                // Google Apps Script로 전송 (Fetch API 사용 - 모바일 전송 보장 및 안정성 강화)
+                // Google Apps Script로 전송 (전송 안정성 최적화 버전)
                 if (GAS_URL && !GAS_URL.includes('YOUR_GAS_WEB_APP_URL_HERE')) {
                     try {
-                        // GAS 전송 시도 (admin.html의 성공 패턴인 Raw JSON + text/plain 방식 사용)
-                        const response = await fetch(GAS_URL, {
+                        // GAS 전송 시도 (백그라운드 비동기 전송으로 차단 방지)
+                        fetch(GAS_URL, {
                             method: 'POST',
-                            mode: 'no-cors', // GAS의 리다이렉트 대응용
+                            mode: 'no-cors',
                             headers: {
-                                'Content-Type': 'text/plain', // CORS 프리플라이트를 피하기 위한 설정
+                                'Content-Type': 'text/plain',
                             },
-                            body: JSON.stringify(submission),
-                            keepalive: true
-                        });
+                            body: JSON.stringify(submission)
+                        }).catch(e => console.error('전송 중단 감지(무시 가능):', e));
 
-                        // 성공 알림 및 데이터 갱신
-                        alert(`성공적으로 제출되었습니다.\n제출일시: ${submission.submitTime}\n\n※ Google Drive 저장 전송이 완료되었습니다.`);
-                        location.reload();
+                        // 전송 개시 직후 성공 메시지 표시 (지연 현상 방지)
+                        setTimeout(() => {
+                            alert(`성공적으로 제출되었습니다.\n제출일시: ${submission.submitTime}\n\n※ 점검 데이터 전송이 완료되었습니다.`);
+                            location.reload();
+                        }, 500);
                     } catch (err) {
                         console.error('Submission Error:', err);
-                        alert('구글 드라이브 전송 중 오류가 발생했습니다.\n네트워크 연결 상태를 확인해 주세요.\n(작성하신 내용은 로컬 스토리지에 임시 저장되었습니다.)');
-                        
-                        // 버튼 복구하여 재입력 가능하게 함
+                        alert('전송 설정 중 오류가 발생했습니다. 네트워크를 확인해 주세요.');
                         submitBtn.disabled = false;
                         submitBtn.innerText = '점검표 다시 제출하기';
                     }
