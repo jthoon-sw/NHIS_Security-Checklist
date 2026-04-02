@@ -933,24 +933,30 @@
                 localData.push(submission);
                 localStorage.setItem('security_check_data', JSON.stringify(localData));
 
-                // Google Apps Script로 전송 (Hidden Iframe 방식 - 모바일 호환성 극대화)
+                // Google Apps Script로 전송 (Fetch API 사용 - 모바일 전송 보장 및 안정성 강화)
                 if (GAS_URL && !GAS_URL.includes('YOUR_GAS_WEB_APP_URL_HERE')) {
                     try {
-                        const submitForm = document.getElementById('gas_submit_form');
-                        const submitData = document.getElementById('gas_submit_data');
-                        submitForm.action = GAS_URL;
-                        submitData.value = JSON.stringify(submission);
-                        submitForm.submit();
+                        // GAS 전송 시도 (admin.html의 성공 패턴인 Raw JSON + text/plain 방식 사용)
+                        const response = await fetch(GAS_URL, {
+                            method: 'POST',
+                            mode: 'no-cors', // GAS의 리다이렉트 대응용
+                            headers: {
+                                'Content-Type': 'text/plain', // CORS 프리플라이트를 피하기 위한 설정
+                            },
+                            body: JSON.stringify(submission),
+                            keepalive: true
+                        });
 
-                        // 전송 및 처리 시간을 고려하여 알림 지연
-                        setTimeout(() => {
-                            alert(`성공적으로 제출되었습니다.\n제출일시: ${submission.submitTime}`);
-                            location.reload();
-                        }, 1200);
+                        // 성공 알림 및 데이터 갱신
+                        alert(`성공적으로 제출되었습니다.\n제출일시: ${submission.submitTime}\n\n※ Google Drive 저장 전송이 완료되었습니다.`);
+                        location.reload();
                     } catch (err) {
                         console.error('Submission Error:', err);
-                        alert('구글 드라이브 전송 중 오류가 발생했습니다. 로컬 스토리지에만 저장되었습니다.');
-                        location.reload();
+                        alert('구글 드라이브 전송 중 오류가 발생했습니다.\n네트워크 연결 상태를 확인해 주세요.\n(작성하신 내용은 로컬 스토리지에 임시 저장되었습니다.)');
+                        
+                        // 버튼 복구하여 재입력 가능하게 함
+                        submitBtn.disabled = false;
+                        submitBtn.innerText = '점검표 다시 제출하기';
                     }
                 } else {
                     alert(`성공적으로 제출되었습니다(로컬 모드).\n제출일시: ${submission.submitTime}\n\n※ 구글 앱스 스크립트 웹 앱 URL이 설정되지 않아 로컬 스토리지에만 저장되었습니다.`);
@@ -1008,11 +1014,6 @@
         });
     </script>
 
-    <!-- Hidden Form for GAS Submission (for Mobile Compatibility) -->
-    <iframe name="hidden_iframe" id="hidden_iframe" style="display:none;"></iframe>
-    <form id="gas_submit_form" target="hidden_iframe" method="POST" style="display:none;">
-        <textarea name="data" id="gas_submit_data"></textarea>
-    </form>
 </body>
 
 </html>
