@@ -890,8 +890,24 @@
                     list.innerHTML = '<tr><td colspan="5" style="padding:40px;">데이터를 불러오는 중입니다...</td></tr>';
                     try {
                         const response = await fetch(`${GAS_URL}?t=${Date.now()}`);
-                        cachedData = await response.json();
-                        console.log('구글 데이터 로드 완료:', cachedData.length, '건');
+                        const rawData = await response.json();
+                        // 데이터 정규화: 구글 드라이브(문자열 저장) 데이터를 객체화하여 프론트엔드 호환성 확보
+                        cachedData = rawData.map(item => {
+                            // items 필드가 문자열인 경우(구글 시트 저장 특성) JSON 파싱 수행
+                            if (typeof item.items === 'string' && item.items.trim().startsWith('{')) {
+                                try { item.items = JSON.parse(item.items); } catch(e) { console.warn('Items parse fail:', item.id); }
+                            }
+                            // 기본 필드 보장
+                            if (!item.items) item.items = { item1: {}, item2: {}, item3: {}, item4: {} };
+                            
+                            // 대소문자나 필드명 차이 발생 시 보정 (서버측 필드명 대응)
+                            item.managerSignature = item.managerSignature || item.managersignature || '';
+                            item.leaderSignature = item.leaderSignature || item.leadersignature || '';
+                            item.checkerType = item.checkerType || item.checkertype || '';
+                            
+                            return item;
+                        });
+                        console.log('구글 데이터 로드 및 정규화 완료:', cachedData.length, '건');
                     } catch (err) {
                         console.error('Fetch error:', err);
                         list.innerHTML = '<tr><td colspan="5" style="padding:40px; color:red;">구글 데이터를 불러오지 못했습니다. 로컬 데이터를 대신 사용합니다.</td></tr>';
