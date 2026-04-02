@@ -586,11 +586,12 @@
         <table>
             <thead>
                 <tr>
-                    <th style="width: 20%;">제출일시</th>
-                    <th style="width: 20%;">층</th>
-                    <th style="width: 20%;">직급</th>
-                    <th style="width: 20%;">성명</th>
-                    <th style="width: 20%;">서명</th>
+                    <th style="width: 15%;">제출일시</th>
+                    <th style="width: 12%;">층</th>
+                    <th style="width: 12%;">직급</th>
+                    <th style="width: 15%;">성명</th>
+                    <th style="width: 23%;">서명</th>
+                    <th style="width: 23%;">결재상태</th>
                 </tr>
             </thead>
             <tbody id="recordList"></tbody>
@@ -936,12 +937,19 @@
                         formattedDate = String(item.submitTime || '-').split('오후')[0].split('오전')[0].trim();
                     }
 
+                    // 결재 상태 표시용 뱃지 생성
+                    let approvalStatus = '';
+                    if (item.managerSignature) approvalStatus += '<span class="badge" style="background:#fffdec; color:#d68100; border:1px solid #e6a23c; margin-right:3px; padding:2px 4px;">담당OK</span>';
+                    if (item.leaderSignature) approvalStatus += '<span class="badge" style="background:#ebf5ff; color:#0074e4; border:1px solid #409eff; padding:2px 4px;">팀장OK</span>';
+                    if (!approvalStatus) approvalStatus = '<span style="color:#bbb; font-size:0.75rem;">대기중</span>';
+
                     tr.innerHTML = `
                         <td>${formattedDate}</td>
                         <td style="font-weight:bold; color:var(--nhis-blue);">${floor}</td>
                         <td>${item.position}급</td>
                         <td>${item.userName}</td>
                         <td><img src="${item.signature}" class="sig-thumbnail"></td>
+                        <td>${approvalStatus}</td>
                     `;
                 } else {
                     tr.style.backgroundColor = '#f9f9f9';
@@ -949,7 +957,7 @@
                     tr.innerHTML = `
                         <td style="color:#ccc;">-</td>
                         <td style="font-weight:bold; color:#777;">${floor}</td>
-                        <td colspan="3" style="color:var(--nhis-red); font-weight:bold;">미점검</td>
+                        <td colspan="4" style="color:var(--nhis-red); font-weight:bold;">미점검</td>
                     `;
                 }
                 list.appendChild(tr);
@@ -1130,8 +1138,11 @@
                     
                     // 캐시 업데이트 및 즉시 반영
                     cachedData[idx] = updatedItem;
-                    alert('서명이 저장되었습니다.');
-                    location.reload();
+                    alert('서명이 저장되었습니다. 동기화를 위해 잠시 후 페이지가 새로고침됩니다.');
+                    // 1초 지연 후 리로드 (구글 드라이브 동기화 시간 확보)
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1000);
                 } catch (err) { 
                     console.error('Approval sync error:', err); 
                     alert('저장 중 오류가 발생했습니다.');
@@ -1472,13 +1483,14 @@
                 // 데이터 찾기
                 let dayData = grouped[targetDateStr];
 
-                // 해당 일자의 모든 레코드에서 담당/팀장 서명 수집
+                // 해당 일자의 모든 레코드에서 담당/팀장 서명 수집 (서명이 있는 가장 최근 레코드 우선)
                 const dayRecords = filtered.filter(i => {
                     const k = getYYYYMMDD(i.checkDate);
                     return k === targetDateStr;
-                });
-                const mSig = dayRecords.find(i => i.managerSignature)?.managerSignature || '';
-                const lSig = dayRecords.find(i => i.leaderSignature)?.leaderSignature || '';
+                }).sort((a, b) => Number(b.id) - Number(a.id)); // 최신순 정렬
+
+                const mSig = dayRecords.find(i => i.managerSignature && i.managerSignature.length > 100)?.managerSignature || '';
+                const lSig = dayRecords.find(i => i.leaderSignature && i.leaderSignature.length > 100)?.leaderSignature || '';
 
                 const tr = document.createElement('tr');
                 const dayStr = `${Number(mm)}.${Number(dd)}.(${'일월화수목금토'[currentDate.getDay()]})<br><span style="font-size:0.7rem; color:#555;">${targetFloor}</span>`;
@@ -1544,7 +1556,10 @@
                     tr.innerHTML = `
                         <td class="font-bold" style="line-height:1.2;">${dayStr}</td>
                         <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
-                        <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+                        <td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+                        <!-- 결재 (데이터가 없어도 서명은 표시) -->
+                        <td>${mSig ? `<img src="${mSig}" style="max-height:28px;">` : ''}</td>
+                        <td>${lSig ? `<img src="${lSig}" style="max-height:28px;">` : ''}</td>
                     `;
                 }
 

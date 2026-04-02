@@ -978,6 +978,9 @@
                         if (existing) {
                             submission.action = 'overwrite';
                             submission.oldId = existing.id;
+                            // 기존 결재 서명 정보 보존
+                            if (existing.managerSignature) submission.managerSignature = existing.managerSignature;
+                            if (existing.leaderSignature) submission.leaderSignature = existing.leaderSignature;
                         }
                     } catch (e) {
                         console.warn('중복 체크 건너뜀 (타임아웃 또는 오류):', e);
