@@ -869,16 +869,8 @@
 
         // 데이터 병합 헬퍼 함수
         function getMergedData() {
-            const localData = JSON.parse(localStorage.getItem('security_check_data') || '[]');
-            const combined = [...localData];
-            cachedData.forEach(cItem => {
-                // ID(타임스탬프)를 기준으로 중복 제거하며 병합 (로컬 데이터 우선)
-                if (!combined.find(lItem => Number(lItem.id) === Number(cItem.id))) {
-                    combined.push(cItem);
-                }
-            });
-            // 최신순 정렬 (ID 내림차순)
-            return combined.sort((a, b) => Number(b.id) - Number(a.id));
+            // 로컬스토리지를 사용하지 않고 구글 드라이브 데이터(cachedData)만 사용
+            return [...cachedData].sort((a, b) => Number(b.id) - Number(a.id));
         }
 
         async function renderRecords(forceRefresh = false) {
@@ -1107,28 +1099,19 @@
         }
 
         async function saveApprovalSignature(type, dataUrl) {
-            let data = JSON.parse(localStorage.getItem('security_check_data') || '[]');
-            // ID 비교 시 문자열로 변환하여 안전하게 비교
-            let idx = data.findIndex(i => String(i.id) === String(currentItem.id));
-            
-            let updatedItem;
+            // 구글 드라이브 캐시 데이터에서 항목 찾기
+            let idx = cachedData.findIndex(i => String(i.id) === String(currentItem.id));
             if (idx === -1) {
-                // 로컬에 해당 기록이 없으면(구글 드라이브 데이터인 경우), 현재 데이터를 기반으로 로컬에 생성
-                updatedItem = { ...currentItem };
-                data.push(updatedItem);
-                idx = data.length - 1;
-            } else {
-                updatedItem = { ...data[idx] };
+                alert('해당 기록을 찾을 수 없습니다.');
+                return;
             }
+
+            let updatedItem = { ...cachedData[idx] };
 
             if (type === 'manager') updatedItem.managerSignature = dataUrl;
             if (type === 'leader') updatedItem.leaderSignature = dataUrl;
             
             updatedItem.lastModified = Date.now(); // 수정 일시 업데이트
-
-            // 로컬 스토리지 업데이트
-            data[idx] = updatedItem;
-            localStorage.setItem('security_check_data', JSON.stringify(data));
 
             // 구글 드라이브(GAS) 업데이트
             if (GAS_URL && !GAS_URL.includes('YOUR_GAS_WEB_APP_URL_HERE')) {
@@ -1138,28 +1121,30 @@
                         action: 'overwrite',
                         oldId: currentItem.id
                     };
-                    fetch(GAS_URL, {
+                    await fetch(GAS_URL, {
                         method: 'POST',
                         mode: 'no-cors',
                         headers: { 'Content-Type': 'text/plain' },
                         body: JSON.stringify(submission)
                     });
                     
-                    // 캐시 업데이트 (관리자 페이지 내부 즉시 반영용)
-                    if (typeof cachedData !== 'undefined') {
-                        const cIdx = cachedData.findIndex(i => i.id === currentItem.id);
-                        if (cIdx !== -1) cachedData[cIdx] = updatedItem;
-                    }
-                } catch (err) { console.error('Approval sync error:', err); }
+                    // 캐시 업데이트 및 즉시 반영
+                    cachedData[idx] = updatedItem;
+                    alert('서명이 저장되었습니다.');
+                    location.reload();
+                } catch (err) { 
+                    console.error('Approval sync error:', err); 
+                    alert('저장 중 오류가 발생했습니다.');
+                }
+            } else {
+                alert('구글 앱스 스크립트 URL이 설정되지 않았습니다.');
             }
-            alert('서명이 저장되었습니다.');
-            location.reload();
         }
 
         function openEdit(id) {
             currentId = id;
-            const data = JSON.parse(localStorage.getItem('security_check_data') || '[]');
-            const item = data.find(i => i.id === id);
+            const item = cachedData.find(i => String(i.id) === String(id));
+            if (!item) return;
 
             document.getElementById('actionView').style.display = 'none';
             document.getElementById('sigView').style.display = 'none';
@@ -1203,12 +1188,11 @@
         }
 
         async function saveChanges() {
-            const data = JSON.parse(localStorage.getItem('security_check_data') || '[]');
-            const idx = data.findIndex(i => i.id === currentId);
+            const idx = cachedData.findIndex(i => String(i.id) === String(currentId));
             if (idx === -1) return;
 
-            // 원본 데이터 복사 및 수정 사항 반영
-            const updatedItem = { ...data[idx] };
+            // 캐시 데이터 복사 및 수정 사항 반영
+            const updatedItem = { ...cachedData[idx] };
             updatedItem.submitTime = document.getElementById('edit_submitTime').value;
             updatedItem.department = document.getElementById('edit_department').value;
             updatedItem.checkerType = document.getElementById('edit_checkerType').value;
@@ -1224,90 +1208,84 @@
                 }
             }
 
-            // 1. 로컬 스토리지 업데이트
-            data[idx] = updatedItem;
-            localStorage.setItem('security_check_data', JSON.stringify(data));
-
-            // 2. 구글 드라이브(GAS) 업데이트 알림 (기존 행 삭제 후 새 데이터 추가 방식)
+            // 구글 드라이브(GAS) 업데이트 알림 (기존 행 삭제 후 새 데이터 추가 방식)
             if (GAS_URL && !GAS_URL.includes('YOUR_GAS_WEB_APP_URL_HERE')) {
                 try {
-                    // action: 'overwrite', oldId: currentId 를 포함하여 전송
                     const submission = {
                         ...updatedItem,
                         action: 'overwrite',
                         oldId: currentId
                     };
 
-                    fetch(GAS_URL, {
+                    await fetch(GAS_URL, {
                         method: 'POST',
                         mode: 'no-cors',
                         headers: { 'Content-Type': 'text/plain' },
                         body: JSON.stringify(submission)
                     });
 
-                    // 관리자 페이지 내부 캐시(cachedData)도 즉시 반영
-                    const cacheIdx = cachedData.findIndex(i => i.id === currentId);
-                    if (cacheIdx !== -1) {
-                        cachedData[cacheIdx] = updatedItem;
-                    }
-                    console.log('구글 드라이브 업데이트 요청 전송 완료');
+                    // 캐시 업데이트
+                    cachedData[idx] = updatedItem;
+                    document.getElementById('modal').style.display = 'none';
+                    alert('수정 사항이 저장되었습니다.');
+                    location.reload();
                 } catch (err) {
                     console.error('Drive sync error:', err);
+                    alert('저장 중 오류가 발생했습니다.');
                 }
+            } else {
+                alert('구글 앱스 스크립트 URL이 설정되지 않았습니다.');
             }
-
-            document.getElementById('modal').style.display = 'none';
-            alert('수정 사항이 저장되었습니다.');
-            location.reload();
         }
 
         async function del(id) {
-            if (!confirm('저장소에서도 삭제됩니다. 정말로 삭제하시겠습니까?')) return;
-
-            // 로컬 스토리지 삭제
-            const data = JSON.parse(localStorage.getItem('security_check_data') || '[]');
-            localStorage.setItem('security_check_data', JSON.stringify(data.filter(i => i.id !== id)));
+            if (!confirm('정말로 삭제하시겠습니까?')) return;
 
             // 구글 드라이브 삭제 전송
             if (GAS_URL && !GAS_URL.includes('YOUR_GAS_WEB_APP_URL_HERE')) {
                 try {
-                    // mode: 'no-cors'를 쓰면 성공 여부를 알 순 없지만 전송은 됨. 
-                    // 하지만 삭제 확인을 위해 일반 fetch 고려 (CORS 설정 필수)
                     await fetch(GAS_URL, {
                         method: 'POST',
                         mode: 'no-cors',
-                        // text/plain을 사용하여 CORS preflight(사전 요청) 없이 전송
                         headers: { 'Content-Type': 'text/plain' },
                         body: JSON.stringify({ action: 'delete', id: id })
                     });
                     // 캐시 업데이트
-                    cachedData = cachedData.filter(i => i.id !== id);
+                    cachedData = cachedData.filter(i => String(i.id) !== String(id));
+                    alert('삭제되었습니다.');
+                    location.reload();
                 } catch (err) {
                     console.error('Delete error:', err);
                     alert('구글 드라이브 삭제 요청 중 오류가 발생했습니다.');
                 }
+            } else {
+                alert('구글 앱스 스크립트 URL이 설정되지 않았습니다.');
             }
-
-            alert('삭제되었습니다.');
-            location.reload();
         }
 
         function exportOfficialPDF() {
-            // 인쇄 옵션 모달 기본값 세팅 (일주일 전 ~ 오늘)
+            // 인쇄 옵션 모달 기본값 세팅 (이번 주 월요일 ~ 일요일)
             const today = new Date();
-            const yyyy = today.getFullYear();
-            const mm = String(today.getMonth() + 1).padStart(2, '0');
-            const dd = String(today.getDate()).padStart(2, '0');
-            const todayStr = `${yyyy}-${mm}-${dd}`;
+            const day = today.getDay(); // 0(일) ~ 6(토)
+            
+            // 월요일 계산 (오늘이 일요일이면 6일 전, 아니면 오늘 - (요일-1))
+            const diffToMonday = (day === 0 ? -6 : 1 - day);
+            const monday = new Date(today);
+            monday.setDate(today.getDate() + diffToMonday);
+            
+            // 일요일 계산 (월요일 + 6일)
+            const sunday = new Date(monday);
+            sunday.setDate(monday.getDate() + 6);
 
-            const lastWeek = new Date(today.getTime() - 6 * 24 * 60 * 60 * 1000);
-            const lw_yyyy = lastWeek.getFullYear();
-            const lw_mm = String(lastWeek.getMonth() + 1).padStart(2, '0');
-            const lw_dd = String(lastWeek.getDate()).padStart(2, '0');
-            const lwStr = `${lw_yyyy}-${lw_mm}-${lw_dd}`;
+            const formatDate = (d) => {
+                const y = d.getFullYear();
+                const m = String(d.getMonth() + 1).padStart(2, '0');
+                const dd = String(d.getDate()).padStart(2, '0');
+                return `${y}-${m}-${dd}`;
+            };
 
-            document.getElementById('pdfStartDate').value = lwStr;
-            document.getElementById('pdfEndDate').value = todayStr;
+            document.getElementById('pdfStartDate').value = formatDate(monday);
+            document.getElementById('pdfEndDate').value = formatDate(sunday);
             document.getElementById('pdfFloorSelector').value = '1층';
 
             document.getElementById('pdfOptionsModal').style.display = 'flex';
