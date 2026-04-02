@@ -1147,18 +1147,20 @@
                     const submission = {
                         ...updatedItem,
                         action: 'overwrite',
-                        oldId: currentItem.id
+                        oldId: String(currentItem.id)
                     };
                     
-                    const submitForm = document.getElementById('gas_submit_form');
-                    const submitData = document.getElementById('gas_submit_data');
-                    submitForm.action = GAS_URL;
-                    submitData.value = JSON.stringify(submission);
-                    submitForm.submit();
+                    // fetch 방식으로 통일 (안정성 확보)
+                    fetch(GAS_URL, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'text/plain' },
+                        body: JSON.stringify(submission)
+                    });
                     
-                    // 캐시 업데이트 (관리자 페이지 내부 즉시 반영용)
+                    // 캐시 업데이트
                     if (typeof cachedData !== 'undefined') {
-                        const cIdx = cachedData.findIndex(i => i.id === currentItem.id);
+                        const cIdx = cachedData.findIndex(i => String(i.id) === String(currentItem.id));
                         if (cIdx !== -1) cachedData[cIdx] = updatedItem;
                     }
                 } catch (err) { console.error('Approval sync error:', err); }
@@ -1169,8 +1171,13 @@
 
         function openEdit(id) {
             currentId = id;
-            const data = JSON.parse(localStorage.getItem('security_check_data') || '[]');
-            const item = data.find(i => i.id === id);
+            // 전체 데이터(병합 데이터)에서 검색하도록 수정
+            const data = getMergedData();
+            const item = data.find(i => String(i.id) === String(id));
+            if (!item) {
+                alert('해당 기록을 찾을 수 없습니다.');
+                return;
+            }
 
             document.getElementById('actionView').style.display = 'none';
             document.getElementById('sigView').style.display = 'none';
@@ -1214,12 +1221,13 @@
         }
 
         async function saveChanges() {
-            const data = JSON.parse(localStorage.getItem('security_check_data') || '[]');
-            const idx = data.findIndex(i => i.id === currentId);
-            if (idx === -1) return;
+            // 전체 병합 데이터에서 검색
+            const mergedData = getMergedData();
+            const itemToUpdate = mergedData.find(i => String(i.id) === String(currentId));
+            if (!itemToUpdate) return;
 
             // 원본 데이터 복사 및 수정 사항 반영
-            const updatedItem = { ...data[idx] };
+            const updatedItem = { ...itemToUpdate };
             updatedItem.submitTime = document.getElementById('edit_submitTime').value;
             updatedItem.department = document.getElementById('edit_department').value;
             updatedItem.checkerType = document.getElementById('edit_checkerType').value;
@@ -1235,9 +1243,15 @@
                 }
             }
 
-            // 1. 로컬 스토리지 업데이트
-            data[idx] = updatedItem;
-            localStorage.setItem('security_check_data', JSON.stringify(data));
+            // 1. 로컬 스토리지 업데이트 (항목이 없으면 새로 추가하여 동기화)
+            let localData = JSON.parse(localStorage.getItem('security_check_data') || '[]');
+            let lIdx = localData.findIndex(i => String(i.id) === String(currentId));
+            if (lIdx === -1) {
+                localData.push(updatedItem);
+            } else {
+                localData[lIdx] = updatedItem;
+            }
+            localStorage.setItem('security_check_data', JSON.stringify(localData));
 
             // 2. 구글 드라이브(GAS) 업데이트 알림 (기존 행 삭제 후 새 데이터 추가 방식)
             if (GAS_URL && !GAS_URL.includes('YOUR_GAS_WEB_APP_URL_HERE')) {
@@ -1257,9 +1271,11 @@
                     });
 
                     // 관리자 페이지 내부 캐시(cachedData)도 즉시 반영
-                    const cacheIdx = cachedData.findIndex(i => i.id === currentId);
-                    if (cacheIdx !== -1) {
-                        cachedData[cacheIdx] = updatedItem;
+                    if (typeof cachedData !== 'undefined') {
+                        const cacheIdx = cachedData.findIndex(i => String(i.id) === String(currentId));
+                        if (cacheIdx !== -1) {
+                            cachedData[cacheIdx] = updatedItem;
+                        }
                     }
                     console.log('구글 드라이브 업데이트 요청 전송 완료');
                 } catch (err) {
@@ -1277,22 +1293,20 @@
 
             // 로컬 스토리지 삭제
             const data = JSON.parse(localStorage.getItem('security_check_data') || '[]');
-            localStorage.setItem('security_check_data', JSON.stringify(data.filter(i => i.id !== id)));
+            localStorage.setItem('security_check_data', JSON.stringify(data.filter(i => String(i.id) !== String(id))));
 
             // 구글 드라이브 삭제 전송
             if (GAS_URL && !GAS_URL.includes('YOUR_GAS_WEB_APP_URL_HERE')) {
                 try {
                     // mode: 'no-cors'를 쓰면 성공 여부를 알 순 없지만 전송은 됨. 
-                    // 하지만 삭제 확인을 위해 일반 fetch 고려 (CORS 설정 필수)
                     await fetch(GAS_URL, {
                         method: 'POST',
                         mode: 'no-cors',
-                        // text/plain을 사용하여 CORS preflight(사전 요청) 없이 전송
                         headers: { 'Content-Type': 'text/plain' },
-                        body: JSON.stringify({ action: 'delete', id: id })
+                        body: JSON.stringify({ action: 'delete', id: String(id) })
                     });
                     // 캐시 업데이트
-                    cachedData = cachedData.filter(i => i.id !== id);
+                    cachedData = cachedData.filter(i => String(i.id) !== String(id));
                 } catch (err) {
                     console.error('Delete error:', err);
                     alert('구글 드라이브 삭제 요청 중 오류가 발생했습니다.');
