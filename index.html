@@ -742,7 +742,7 @@
 
     <script>
         // Google Apps Script 웹 앱 URL을 여기에 입력하세요.
-                const GAS_URL = 'https://script.google.com/macros/s/AKfycbzpd8Nh7en-kBKmrDsamHCuaGNf8M-9ewSux9Nh-rLou0m9z5niAGGPv297Qj-_zfSU/exec';
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbzpd8Nh7en-kBKmrDsamHCuaGNf8M-9ewSux9Nh-rLou0m9z5niAGGPv297Qj-_zfSU/exec';
 
         document.addEventListener('DOMContentLoaded', () => {
             // 새로고침 시 최상단으로 이동
@@ -912,78 +912,7 @@
                 };
 
                 const submitBtn = document.querySelector('.btn-submit');
-                const originalText = submitBtn.innerText;
                 submitBtn.disabled = true;
-                submitBtn.innerText = '확인 중...';
-
-                // [추가] 타임아웃 헬퍼 함수
-                const fetchWithTimeout = (url, options, timeout = 5000) => {
-                    return Promise.race([
-                        fetch(url, options),
-                        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), timeout))
-                    ]);
-                };
-
-                // [추가] 중복 데이터 확인 (구글 드라이브 연동 시)
-                if (GAS_URL && !GAS_URL.includes('YOUR_GAS_WEB_APP_URL_HERE')) {
-                    try {
-                        // 중복 체크는 3초 이내에 끝나지 않으면 스킵하고 제출 진행
-                        const checkResp = await fetchWithTimeout(`${GAS_URL}?t=${Date.now()}`, {}, 3000); 
-                        const allData = await checkResp.json();
-                        
-                        // 날짜 및 부서 매칭 (공백 제거 및 시간대 보정)
-                        const existing = allData.find(i => {
-                            if (!i.checkDate || !i.department) return false;
-                            
-                            // 부서명 비교 (공백 제거)
-                            const sheetDept = String(i.department).replace(/\s/g, '');
-                            const currentDept = submission.department.replace(/\s/g, '');
-                            if (sheetDept !== currentDept) return false;
-
-                            // 날짜 비교 (로컬 시간 기준)
-                            let itemDateStr = String(i.checkDate).trim();
-                            let sheetDateFormatted = "";
-                            
-                            // 1. ISO 형식 추출 (T 포함)
-                            if (itemDateStr.includes('T') || itemDateStr.includes('Z')) {
-                                try {
-                                    const dObj = new Date(itemDateStr);
-                                    if (!isNaN(dObj.getTime())) {
-                                        sheetDateFormatted = `${dObj.getFullYear()}-${String(dObj.getMonth() + 1).padStart(2, '0')}-${String(dObj.getDate()).padStart(2, '0')}`;
-                                    }
-                                } catch(e) {}
-                            }
-                            
-                            // 2. 일반 문자열 처리 (예: 2024. 3. 21. 또는 2024-03-21)
-                            if (!sheetDateFormatted) {
-                                let temp = itemDateStr.split('T')[0].split(' ')[0]
-                                    .replace(/\.\s?/g, '-') 
-                                    .replace(/\/\s?/g, '-')
-                                    .replace(/\s/g, '-');
-                                
-                                while(temp.endsWith('-')) temp = temp.slice(0, -1);
-                                
-                                const parts = temp.split('-').filter(p => p !== "");
-                                if (parts.length === 3) {
-                                    let y = parts[0];
-                                    if (y.length === 2) y = "20" + y; 
-                                    sheetDateFormatted = `${y}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
-                                } else {
-                                    sheetDateFormatted = temp;
-                                }
-                            }
-                            return sheetDateFormatted === submission.checkDate;
-                        });
-                        
-                        if (existing) {
-                            submission.action = 'overwrite';
-                            submission.oldId = existing.id;
-                        }
-                    } catch (e) {
-                        console.warn('중복 체크 건너뜀 (타임아웃 또는 오류):', e);
-                    }
-                }
-
                 submitBtn.innerText = '제출 중...';
 
                 // 로컬 스토리지 백업
@@ -994,22 +923,18 @@
                 // Google Apps Script로 전송
                 if (GAS_URL && !GAS_URL.includes('YOUR_GAS_WEB_APP_URL_HERE')) {
                     try {
-                        // 전송은 6초 타임아웃 설정
-                        await fetchWithTimeout(GAS_URL, {
+                        await fetch(GAS_URL, {
                             method: 'POST',
                             mode: 'no-cors',
                             headers: { 'Content-Type': 'text/plain' },
                             body: JSON.stringify(submission)
-                        }, 6000);
+                        });
                         
                         alert(`성공적으로 제출되었습니다.\n제출일시: ${submission.submitTime}`);
                         location.reload();
                     } catch (err) {
                         console.error('Error:', err);
-                        const msg = err.message === 'Timeout' 
-                            ? '구글 드라이브 전송 시간이 초과되었습니다. 인터넷 연결을 확인해 주세요. (로컬에는 저장됨)'
-                            : '구글 드라이브 전송 중 오류가 발생했습니다. 로컬 스토리지에만 저장되었습니다.';
-                        alert(msg);
+                        alert('구글 드라이브 전송 중 오류가 발생했습니다. 로컬 스토리지에만 저장되었습니다.');
                         location.reload();
                     }
                 } else {
