@@ -1318,21 +1318,28 @@
         }
 
         function exportOfficialPDF() {
-            // 인쇄 옵션 모달 기본값 세팅 (일주일 전 ~ 오늘)
+            // 인쇄 옵션 모달 기본값 세팅 (이번 주 월요일 ~ 일요일)
             const today = new Date();
-            const yyyy = today.getFullYear();
-            const mm = String(today.getMonth() + 1).padStart(2, '0');
-            const dd = String(today.getDate()).padStart(2, '0');
-            const todayStr = `${yyyy}-${mm}-${dd}`;
+            const day = today.getDay(); // 0(일) ~ 6(토)
+            
+            // 월요일 계산 (오늘에서 현재 요일-1 만큼 뺌, 일요일(0)인 경우 6일 전)
+            const diffToMonday = (day === 0 ? -6 : 1 - day);
+            const monday = new Date(today);
+            monday.setDate(today.getDate() + diffToMonday);
+            
+            // 일요일 계산 (월요일 + 6일)
+            const sunday = new Date(monday);
+            sunday.setDate(monday.getDate() + 6);
+            
+            const formatDate = (d) => {
+                const y = d.getFullYear();
+                const m = String(d.getMonth() + 1).padStart(2, '0');
+                const dd = String(d.getDate()).padStart(2, '0');
+                return `${y}-${m}-${dd}`;
+            };
 
-            const lastWeek = new Date(today.getTime() - 6 * 24 * 60 * 60 * 1000);
-            const lw_yyyy = lastWeek.getFullYear();
-            const lw_mm = String(lastWeek.getMonth() + 1).padStart(2, '0');
-            const lw_dd = String(lastWeek.getDate()).padStart(2, '0');
-            const lwStr = `${lw_yyyy}-${lw_mm}-${lw_dd}`;
-
-            document.getElementById('pdfStartDate').value = lwStr;
-            document.getElementById('pdfEndDate').value = todayStr;
+            document.getElementById('pdfStartDate').value = formatDate(monday);
+            document.getElementById('pdfEndDate').value = formatDate(sunday);
             document.getElementById('pdfFloorSelector').value = '1층';
 
             document.getElementById('pdfOptionsModal').style.display = 'flex';
@@ -1429,7 +1436,12 @@
                 const dateKey = getYYYYMMDD(item.checkDate);
                 if (!dateKey) return;
                 if (!grouped[dateKey]) grouped[dateKey] = { '최종퇴청자': null, '당직근무자': null };
-                grouped[dateKey][item.checkerType] = item;
+                
+                // 타입 매칭 시 공백 등 정제하여 정확히 할당
+                const type = String(item.checkerType || '').trim();
+                if (type === '최종퇴청자' || type === '당직근무자') {
+                    grouped[dateKey][type] = item;
+                }
             });
 
             const area = document.getElementById('officialFormArea');
@@ -1530,10 +1542,16 @@
                 if (dayData) {
                     const getVal = (type, itemKey) => {
                         const submission = dayData[type];
-                        if (!submission) return '';
-                        const val = submission.items[itemKey]?.value || '';
-                        if (val === '양호') return 'O';
-                        if (val === '불량') return 'X';
+                        if (!submission || !submission.items) return '';
+                        
+                        // 데이터 안전하게 추출 및 정제
+                        const itemData = submission.items[itemKey];
+                        let val = String(itemData?.value || '').trim();
+                        
+                        // 양호/불량 -> O/X 변환 (다양한 입력값 대응)
+                        if (val === '양호' || val === 'O' || val === 'o' || val === 'ok') return 'O';
+                        if (val === '불량' || val === 'X' || val === 'x' || val === 'no') return 'X';
+                        
                         return val;
                     };
 
