@@ -1469,6 +1469,9 @@
                 const dd = String(currentDate.getDate()).padStart(2, '0');
                 const targetDateStr = `${yyyy}-${mm}-${dd}`;
 
+                // 데이터 찾기
+                let dayData = grouped[targetDateStr];
+
                 // 해당 일자의 모든 레코드에서 담당/팀장 서명 수집
                 const dayRecords = filtered.filter(i => {
                     const k = getYYYYMMDD(i.checkDate);
