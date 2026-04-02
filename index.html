@@ -788,6 +788,11 @@
                 modalCanvas.width = rect.width * r;
                 modalCanvas.height = rect.height * r;
                 modalCtx.scale(r, r);
+
+                // 배경색 흰색으로 채우기 (JPEG 압축 대응)
+                modalCtx.fillStyle = "white";
+                modalCtx.fillRect(0, 0, rect.width, rect.height);
+
                 modalCtx.strokeStyle = "#111";
                 modalCtx.lineWidth = 3;
                 modalCtx.lineCap = "round";
@@ -799,9 +804,7 @@
                 document.body.style.overflow = 'hidden'; // Prevent scrolling
                 resizeModalCanvas();
 
-                // If we already had a signature, we don't necessarily want to clear it 
-                // but for simplicity in this flow, we let them redraw if they open it.
-                // Or we could draw the existing one back.
+                // 기존 서명이 있을 경우 복원
                 if (hasSignature) {
                     const img = new Image();
                     img.src = sigPreview.src;
@@ -851,7 +854,9 @@
             modalCanvas.addEventListener('touchend', stop);
 
             btnSigClear.addEventListener('click', () => {
-                modalCtx.clearRect(0, 0, modalCanvas.width, modalCanvas.height);
+                const rect = modalCanvas.getBoundingClientRect();
+                modalCtx.fillStyle = "white";
+                modalCtx.fillRect(0, 0, rect.width, rect.height);
                 hasSignature = false;
             });
 
@@ -861,8 +866,8 @@
                     return;
                 }
 
-                // 미리보기 표시
-                sigPreview.src = modalCanvas.toDataURL();
+                // 미리보기 표시 (JPEG 0.6 압축 적용하여 모바일 전송 안정성 확보)
+                sigPreview.src = modalCanvas.toDataURL('image/jpeg', 0.6);
                 sigPreview.style.display = 'block';
                 placeholderText.style.display = 'none';
 
