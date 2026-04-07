@@ -954,16 +954,9 @@
             return s.substring(0, 10);
         };
 
-        // 데이터 병합 헬퍼 함수
+        // 데이터 로드 헬퍼 함수 (로컬 데이터 제외, 서버 데이터만 사용)
         function getMergedData() {
-            const localData = JSON.parse(localStorage.getItem('security_check_data') || '[]');
-            const combined = [...localData];
-            cachedData.forEach(cItem => {
-                // ID(타임스탬프)를 기준으로 중복 제거하며 병합 (로컬 데이터 우선)
-                if (!combined.find(lItem => Number(lItem.id) === Number(cItem.id))) {
-                    combined.push(cItem);
-                }
-            });
+            const combined = [...cachedData];
             // 최신순 정렬 (ID 내림차순)
             return combined.sort((a, b) => Number(b.id) - Number(a.id));
         }
