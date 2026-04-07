@@ -1672,36 +1672,67 @@
                         const submission = dayData[type];
                         if (!submission) return '';
                         
-                        // submission.items가 문자열인 경우 대응 (안전 장치)
-                        let itemsObj = submission.items;
-                        if (typeof itemsObj === 'string' && itemsObj.trim().startsWith('{')) {
-                            try { itemsObj = JSON.parse(itemsObj); } catch(e) {}
+                        // [강화] 인덱스 번호 추출 (1, 2, 3, 4)
+                        const itemIdx = parseInt(itemKey.replace(/[^0-9]/g, ''));
+                        
+                        // [옴니 서치] 지능형 키 검색 헬퍼
+                        const findInObj = (obj) => {
+                            if (!obj || typeof obj !== 'object') return null;
+                            const keys = Object.keys(obj);
+                            // 1. 대소문자 무시 완전 일치 (item1, Item1, ITEM1 ...)
+                            let found = keys.find(k => k.toLowerCase() === itemKey.toLowerCase());
+                            // 2. 유사 패턴 매칭 (항목1, 1번, Item_1, [1] 등)
+                            if (!found) {
+                                found = keys.find(k => {
+                                    const kLower = k.toLowerCase();
+                                    return kLower.includes('item' + itemIdx) || 
+                                           (kLower.includes('항목') && kLower.includes(String(itemIdx))) ||
+                                           (kLower.length < 5 && kLower.includes(String(itemIdx)));
+                                });
+                            }
+                            
+                            if (found) {
+                                const v = obj[found];
+                                // 객체 {value: '...'} 형태이거나 단순 값인 경우 모두 처리
+                                return (typeof v === 'object' && v !== null) ? (v.value || '') : v;
+                            }
+                            return null;
+                        };
+
+                        let items = submission.items;
+                        // items가 문자열인 경우 파싱 시도 (JSON, CSV, Array string 등)
+                        if (typeof items === 'string') {
+                            const trm = items.trim();
+                            if (trm.startsWith('{') || trm.startsWith('[')) {
+                                try { items = JSON.parse(trm); } catch(e) {}
+                            } else if (trm.includes(',') || trm.includes('|')) {
+                                items = trm.split(/[,|]/).map(s => s.trim());
+                            }
                         }
 
                         let target = null;
-                        // 1. items 객체 내부 검색
-                        if (itemsObj && itemsObj[itemKey]) {
-                            target = itemsObj[itemKey];
+                        // 1단계: items 내부 조사 (배열 vs 객체)
+                        if (Array.isArray(items)) {
+                            target = items[itemIdx - 1];
+                        } else {
+                            target = findInObj(items);
                         }
-                        // 2. root에서 직접 검색 (Flat 구조 호환)
-                        else if (submission[itemKey]) {
-                            target = submission[itemKey];
+                        
+                        // 2단계: root 레벨 전수 조사 (Omni-Search)
+                        if (target === null || target === undefined) {
+                            target = findInObj(submission);
                         }
 
                         if (target === null || target === undefined) return '';
 
-                        // 값 추출 (객체 {value:...} 형태이거나 단순 값인 경우)
-                        let rawVal = (typeof target === 'object' && target !== null) ? (target.value || '') : target;
+                        // 지능형 키워드 판별 (양호/정상/O/OK/TRUE -> O, 불량/이상/X/NG/FALSE -> X)
+                        const raw = String(target).replace(/\s/g, '').toUpperCase();
+                        if (!raw) return '';
                         
-                        // 문자열 정규화 (모든 공백 제거)
-                        const normalizedVal = String(rawVal).replace(/\s/g, '');
-                        if (!normalizedVal) return '';
-
-                        // 유연한 매칭 (양호/정상/O -> O, 불량/이상/X -> X)
-                        if (normalizedVal.includes('양호') || normalizedVal === 'O' || normalizedVal.includes('정상')) return 'O';
-                        if (normalizedVal.includes('불량') || normalizedVal === 'X' || normalizedVal.includes('이상')) return 'X';
+                        if (raw.includes('양호') || raw.includes('정상') || raw === 'O' || raw === 'OK' || raw === 'TRUE') return 'O';
+                        if (raw.includes('불량') || raw.includes('이상') || raw === 'X' || raw.includes('NG') || raw === 'FALSE') return 'X';
                         
-                        return rawVal;
+                        return String(target);
                     };
 
                     const getInfo = (type, infoKey) => {
