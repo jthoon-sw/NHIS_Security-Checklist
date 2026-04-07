@@ -1546,9 +1546,18 @@
                         leaderSignature: ''
                     };
                 }
-                // filtered는 최신순이므로 타입별 첫 1건이 최종값
-                if (!grouped[dateKey][item.checkerType]) {
-                    grouped[dateKey][item.checkerType] = item;
+                
+                // 타입 판별 로직 강화 (root의 checkerType 우선, 없으면 items 내부 확인)
+                let resolvedType = item.checkerType || (item.items && item.items.item1 && item.items.item1.type) || '최종퇴청자';
+                resolvedType = String(resolvedType).trim();
+                
+                // 매칭 시 시각적 일치를 위해 정확한 키로 보정
+                if (resolvedType.includes('당직')) resolvedType = '당직근무자';
+                else if (resolvedType.includes('최종') || resolvedType.includes('퇴청')) resolvedType = '최종퇴청자';
+                else resolvedType = '최종퇴청자'; // 기본값
+
+                if (!grouped[dateKey][resolvedType]) {
+                    grouped[dateKey][resolvedType] = item;
                 }
                 // 결재 서명은 해당 날짜/층의 어떤 제출 데이터에라도 있으면 채택
                 if (!grouped[dateKey].managerSignature && item.managerSignature) {
@@ -1658,7 +1667,14 @@
                     const getVal = (type, itemKey) => {
                         const submission = dayData[type];
                         if (!submission) return '';
-                        const val = submission.items[itemKey]?.value || '';
+                        
+                        let val = '';
+                        if (submission.items && submission.items[itemKey]) {
+                            const itm = submission.items[itemKey];
+                            // itm이 객체 { value: "양호" } 인지 아니면 단순 값 "양호" 인지 확인
+                            val = (typeof itm === 'object' && itm !== null) ? (itm.value || '') : itm;
+                        }
+                        
                         if (val === '양호') return 'O';
                         if (val === '불량') return 'X';
                         return val;
