@@ -941,24 +941,32 @@
                 } catch (e) { }
             }
 
-            // 일반 문자열 처리 (. / - 공백 등)
-            s = s.replace(/\. /g, '-').replace(/\./g, '-').replace(/\//g, '-').replace(/ /g, '-');
-            const parts = s.split('-').filter(p => /^\d+$/.test(p));
-            if (parts.length >= 3) {
+            // [강화] ISO 포맷(T) 및 특수 구분자 처리
+            if (s.includes('T')) s = s.split('T')[0];
+            const parts = String(s).match(/\d+/g);
+            if (parts && parts.length >= 3) {
                 let y = parts[0];
-                if (y.length === 2) y = "20" + y; // 2자리 연도 보정
+                if (y.length === 2) y = "20" + y;
                 const m = parts[1].padStart(2, '0');
                 const d = parts[2].padStart(2, '0');
                 return `${y}-${m}-${d}`;
             }
-            return s.substring(0, 10);
+            return String(s).substring(0, 10);
         };
 
         // 데이터 로드 헬퍼 함수 (로컬 데이터 제외, 서버 데이터만 사용)
         function getMergedData() {
-            const combined = [...cachedData];
-            // 최신순 정렬 (ID 내림차순)
-            return combined.sort((a, b) => Number(b.id) - Number(a.id));
+            // 1. 서버 데이터 캐시를 역순으로 복사 (시트 하단에 추가된 수정본에 우선권을 주기 위함)
+            const reversed = [...cachedData].reverse();
+            // 2. ID(타입스탬프) 기준 내림차순 정렬
+            return reversed.sort((a, b) => {
+                const idDiff = Number(b.id) - Number(a.id);
+                if (idDiff !== 0) return idDiff;
+                // 3. ID가 같은 경우(중복/수정본), modifiedAt 필드가 있는 최신 데이터를 우선함
+                const aMod = a.modifiedAt || 0;
+                const bMod = b.modifiedAt || 0;
+                return bMod - aMod;
+            });
         }
 
         // 날짜+층 기준 요약(최신 1건 + 점검/결재 존재 여부)
@@ -1277,15 +1285,21 @@
 
         function openEdit(id) {
             currentId = id;
-            const data = JSON.parse(localStorage.getItem('security_check_data') || '[]');
+            // 로컬 스토리지 대신 현재 화면에 표시된 병합 데이터(서버 데이터 중심)에서 찾음
+            const data = getMergedData();
             const item = data.find(i => i.id === id);
+            
+            if (!item) {
+                alert('수정할 데이터를 찾을 수 없습니다.');
+                return;
+            }
 
             document.getElementById('actionView').style.display = 'none';
             document.getElementById('sigView').style.display = 'none';
             document.getElementById('editView').style.display = 'block';
 
-            // 제출일시 포맷팅 (YYYY-MM-DDTHH:mm)
-            const dateObj = new Date(item.id);
+            // 제출일시 포맷팅 (YYYY-MM-DDTHH:mm) - datetime-local 입력창용
+            const dateObj = new Date(Number(item.id));
             const yyyy = dateObj.getFullYear();
             const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
             const dd = String(dateObj.getDate()).padStart(2, '0');
@@ -1293,7 +1307,7 @@
             const min = String(dateObj.getMinutes()).padStart(2, '0');
             document.getElementById('edit_submitTime').value = `${yyyy}-${mm}-${dd}T${hh}:${min}`;
             document.getElementById('edit_department').value = item.department || '';
-            document.getElementById('edit_checkerType').value = item.checkerType || (item.items.item1?.type || '최종퇴청자');
+            document.getElementById('edit_checkerType').value = item.checkerType || (item.items && item.items.item1 && item.items.item1.type) || '최종퇴청자';
             
             // 직급이 "1" 또는 "1급" 형식일 수 있으므로 숫자만 추출하여 처리
             let posVal = String(item.position || '');
@@ -1310,47 +1324,96 @@
             const area = document.getElementById('editFormArea');
             area.innerHTML = '<label class="full-width" style="margin-bottom:5px;">점검 항목별 상태</label>';
             const labels = ["1.화재 단속 상태", "2.소등 및 전원 상태", "3.서류보관 상태", "4.문단속 상태"];
+            
+            // items 파싱 시도 (비표준 형식 대응)
+            let itemsObj = item.items;
+            if (typeof itemsObj === 'string') {
+                try {
+                    if (itemsObj.trim().startsWith('{')) itemsObj = JSON.parse(itemsObj);
+                } catch(e) {}
+            }
+
             for (let i = 1; i <= 4; i++) {
-                const itm = item.items[`item${i}`];
+                let itmVal = '양호';
+                if (itemsObj) {
+                    const itm = (typeof itemsObj === 'object') ? itemsObj[`item${i}`] : null;
+                    itmVal = (itm && typeof itm === 'object') ? (itm.value || '양호') : (itm || '양호');
+                }
+                
                 area.innerHTML += `<div><label>${labels[i - 1]}</label>
                     <select id="edit_val_${i}">
-                        <option value="양호" ${itm.value === '양호' ? 'selected' : ''}>양호</option>
-                        <option value="불량" ${itm.value === '불량' ? 'selected' : ''}>불량</option>
+                        <option value="양호" ${itmVal === '양호' ? 'selected' : ''}>양호</option>
+                        <option value="불량" ${itmVal === '불량' ? 'selected' : ''}>불량</option>
                     </select></div>`;
             }
             document.getElementById('modal').style.display = 'flex';
         }
 
+        // 한국식 날짜 포맷 변환 헬퍼 (YYYY. M. D. 오전/오후 H:mm:ss)
+        function formatKoreanDate(dateStr) {
+            const d = new Date(dateStr);
+            if (isNaN(d.getTime())) return dateStr;
+            const y = d.getFullYear();
+            const m = d.getMonth() + 1;
+            const day = d.getDate();
+            let hh = d.getHours();
+            const min = String(d.getMinutes()).padStart(2, '0');
+            const sec = String(d.getSeconds()).padStart(2, '0');
+            const ampm = hh >= 12 ? '오후' : '오전';
+            hh = hh % 12 || 12;
+            return `${y}. ${m}. ${day}. ${ampm} ${hh}:${min}:${sec}`;
+        }
+
         async function saveChanges() {
-            const data = JSON.parse(localStorage.getItem('security_check_data') || '[]');
-            const idx = data.findIndex(i => i.id === currentId);
-            if (idx === -1) return;
+            // 수정할 대상 데이터를 cachedData와 localStorage 모두에서 찾음
+            const allData = getMergedData();
+            const item = allData.find(i => i.id === currentId);
+            if (!item) return;
 
             // 원본 데이터 복사 및 수정 사항 반영
-            const updatedItem = { ...data[idx] };
-            updatedItem.submitTime = document.getElementById('edit_submitTime').value;
+            const updatedItem = { ...item };
+            const inputTime = document.getElementById('edit_submitTime').value;
+            // 입력된 시간을 한국식 포맷으로 변환하여 저장
+            updatedItem.submitTime = formatKoreanDate(inputTime);
+            // 점검일자(checkDate)도 수정된 시간에 맞춰 동기화 (YYYY-MM-DD 형식)
+            updatedItem.checkDate = inputTime.split('T')[0];
             updatedItem.department = document.getElementById('edit_department').value;
             updatedItem.checkerType = document.getElementById('edit_checkerType').value;
             updatedItem.position = document.getElementById('edit_position').value;
             updatedItem.userName = document.getElementById('edit_userName').value;
             updatedItem.signature = currentEditingSig;
+            // [강화] 수정 시각 기록 (동일 ID 중 최우선 채택을 위함)
+            updatedItem.modifiedAt = Date.now();
 
             // 점검 항목 업데이트
+            if (!updatedItem.items || typeof updatedItem.items !== 'object') {
+                updatedItem.items = {};
+            }
             for (let i = 1; i <= 4; i++) {
-                if (updatedItem.items && updatedItem.items[`item${i}`]) {
-                    updatedItem.items[`item${i}`].value = document.getElementById(`edit_val_${i}`).value;
-                    updatedItem.items[`item${i}`].type = updatedItem.checkerType;
-                }
+                const val = document.getElementById(`edit_val_${i}`).value;
+                if (!updatedItem.items[`item${i}`]) updatedItem.items[`item${i}`] = {};
+                updatedItem.items[`item${i}`].value = val;
+                updatedItem.items[`item${i}`].type = updatedItem.checkerType;
             }
 
-            // 1. 로컬 스토리지 업데이트
-            data[idx] = updatedItem;
-            localStorage.setItem('security_check_data', JSON.stringify(data));
+            // 1. 로컬 스토리지 업데이트 (동기화 용)
+            const localData = JSON.parse(localStorage.getItem('security_check_data') || '[]');
+            const lIdx = localData.findIndex(i => i.id === currentId);
+            if (lIdx !== -1) {
+                localData[lIdx] = updatedItem;
+                localStorage.setItem('security_check_data', JSON.stringify(localData));
+            }
 
-            // 2. 구글 드라이브(GAS) 업데이트 알림 (기존 행 삭제 후 새 데이터 추가 방식)
+            // 2. 관리자 페이지 캐시(cachedData) 즉시 반영
+            if (typeof cachedData !== 'undefined') {
+                const cIdx = cachedData.findIndex(i => i.id === currentId);
+                if (cIdx !== -1) cachedData[cIdx] = updatedItem;
+                else cachedData.push(updatedItem); // 캐시에 없던 경우 추가 (로컬에서 온 데이터 등)
+            }
+
+            // 3. 구글 드라이브(GAS) 업데이트 알림
             if (GAS_URL && !GAS_URL.includes('YOUR_GAS_WEB_APP_URL_HERE')) {
                 try {
-                    // action: 'overwrite', oldId: currentId 를 포함하여 전송
                     const submission = {
                         ...updatedItem,
                         action: 'overwrite',
@@ -1363,12 +1426,6 @@
                         headers: { 'Content-Type': 'text/plain' },
                         body: JSON.stringify(submission)
                     });
-
-                    // 관리자 페이지 내부 캐시(cachedData)도 즉시 반영
-                    const cacheIdx = cachedData.findIndex(i => i.id === currentId);
-                    if (cacheIdx !== -1) {
-                        cachedData[cacheIdx] = updatedItem;
-                    }
                     console.log('구글 드라이브 업데이트 요청 전송 완료');
                 } catch (err) {
                     console.error('Drive sync error:', err);
