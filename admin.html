@@ -188,6 +188,75 @@
             background-color: #fff9f9 !important;
         }
 
+        #recordList tr.row-missing-approval-partial td {
+            background: #fff3cd;
+        }
+
+        #recordList tr.row-missing-manager-only td {
+            background: #fff3cd;
+        }
+
+        #recordList tr.row-missing-leader-only td {
+            background: #eaf2ff;
+        }
+
+        #recordList tr.row-missing-approval-both td {
+            background: #fdeaea;
+        }
+
+        #recordList tr.row-missing-approval-partial:hover td {
+            background: #ffe8a1 !important;
+        }
+
+        #recordList tr.row-missing-manager-only:hover td {
+            background: #ffe8a1 !important;
+        }
+
+        #recordList tr.row-missing-leader-only:hover td {
+            background: #d7e8ff !important;
+        }
+
+        #recordList tr.row-missing-approval-both:hover td {
+            background: #f8d4d4 !important;
+        }
+
+        .status-summary {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            color: #333;
+            margin-top: 2px;
+        }
+
+        .status-chip {
+            padding: 4px 8px;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            line-height: 1;
+            border: 1px solid transparent;
+        }
+
+        .status-chip.checker {
+            background: #e8f5e9;
+            color: #1d6b20;
+            border-color: #bfe4c3;
+        }
+
+        .status-chip.manager {
+            background: #fff3cd;
+            color: #7a5d00;
+            border-color: #ffe39b;
+        }
+
+        .status-chip.leader {
+            background: #eaf2ff;
+            color: #124d99;
+            border-color: #c7dcff;
+        }
+
         #modal {
             display: none;
             position: fixed;
@@ -471,6 +540,20 @@
             font-weight: 700;
         }
 
+        .cell-missing-approval {
+            background: #fff3cd !important;
+            color: #8a6d3b;
+            font-weight: 700;
+        }
+
+        .cell-missing-approval-partial {
+            background: #fff3cd !important;
+        }
+
+        .cell-missing-approval-both {
+            background: #fdeaea !important;
+        }
+
         @media (max-width: 600px) {
             .admin-header {
                 grid-template-columns: auto 1fr;
@@ -493,6 +576,10 @@
                 flex-direction: column;
                 gap: 10px;
                 text-align: center;
+            }
+
+            .approval-legend {
+                justify-content: center;
             }
         }
 
@@ -825,7 +912,7 @@
 
     <script>
         // Google Apps Script 웹 앱 URL을 여기에 입력하세요 (index.html과 동일한 URL).
-                const GAS_URL = 'https://script.google.com/macros/s/AKfycbxNJH-3S7-7eyUF_HhjQ0ULyfIZzoqWC_APn9AWo7BHvg9hno8k5fS7pWGfqr8xrbVw/exec';
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbwTOa0hwUC7JnLKTpN9ErW5FIbnrcO3Wc13oz_Qedu6u6jGyCYOi_mK8eBqObkskjNH/exec';
         const FLOORS = ['1층', '2층', '3층', '4층', '5층', '6층', '7층', '8층', '별관2층'];
         let currentId = null;
         let cachedData = []; // 구글 드라이브에서 불러온 데이터 캐시
@@ -881,6 +968,29 @@
             return combined.sort((a, b) => Number(b.id) - Number(a.id));
         }
 
+        // 날짜+층 기준 요약(최신 1건 + 점검/결재 존재 여부)
+        function buildFloorDailySummary(records, dateKey) {
+            const summaryMap = new Map();
+            records.forEach(item => {
+                if (getYYYYMMDD(item.checkDate) !== dateKey) return;
+                const dept = String(item.department || '').replace(/\s/g, '');
+                if (!dept) return;
+                if (!summaryMap.has(dept)) {
+                    summaryMap.set(dept, {
+                        latestItem: item, // records는 최신순이므로 첫 항목이 표시용 최종값
+                        hasSubmitter: false,
+                        hasManagerApproval: false,
+                        hasLeaderApproval: false
+                    });
+                }
+                const summary = summaryMap.get(dept);
+                if (item.userName || item.signature) summary.hasSubmitter = true;
+                if (item.managerSignature) summary.hasManagerApproval = true;
+                if (item.leaderSignature) summary.hasLeaderApproval = true;
+            });
+            return summaryMap;
+        }
+
         async function renderRecords(forceRefresh = false) {
             const selectedDate = document.getElementById('dateSelector').value;
             const list = document.getElementById('recordList');
@@ -890,24 +1000,8 @@
                     list.innerHTML = '<tr><td colspan="5" style="padding:40px;">데이터를 불러오는 중입니다...</td></tr>';
                     try {
                         const response = await fetch(`${GAS_URL}?t=${Date.now()}`);
-                        const rawData = await response.json();
-                        // 데이터 정규화: 구글 드라이브(문자열 저장) 데이터를 객체화하여 프론트엔드 호환성 확보
-                        cachedData = rawData.map(item => {
-                            // items 필드가 문자열인 경우(구글 시트 저장 특성) JSON 파싱 수행
-                            if (typeof item.items === 'string' && item.items.trim().startsWith('{')) {
-                                try { item.items = JSON.parse(item.items); } catch(e) { console.warn('Items parse fail:', item.id); }
-                            }
-                            // 기본 필드 보장
-                            if (!item.items) item.items = { item1: {}, item2: {}, item3: {}, item4: {} };
-                            
-                            // 대소문자나 필드명 차이 발생 시 보정 (서버측 필드명 대응)
-                            item.managerSignature = item.managerSignature || item.managersignature || '';
-                            item.leaderSignature = item.leaderSignature || item.leadersignature || '';
-                            item.checkerType = item.checkerType || item.checkertype || '';
-                            
-                            return item;
-                        });
-                        console.log('구글 데이터 로드 및 정규화 완료:', cachedData.length, '건');
+                        cachedData = await response.json();
+                        console.log('구글 데이터 로드 완료:', cachedData.length, '건');
                     } catch (err) {
                         console.error('Fetch error:', err);
                         list.innerHTML = '<tr><td colspan="5" style="padding:40px; color:red;">구글 데이터를 불러오지 못했습니다. 로컬 데이터를 대신 사용합니다.</td></tr>';
@@ -918,33 +1012,42 @@
             // 병합된 데이터 사용
             const data = getMergedData();
 
-            // 선택된 날짜의 데이터만 필터링
-            const filtered = data.filter(i => {
-                const finalDate = getYYYYMMDD(i.checkDate);
-                const dateMatches = (finalDate === selectedDate);
-                if (dateMatches) {
-                    console.log(`[날짜 일치] ${i.department} (제출일: ${finalDate})`);
-                }
-                return dateMatches;
-            });
+            // 선택 날짜 + 층 기준 요약 생성
+            const floorSummaryMap = buildFloorDailySummary(data, selectedDate);
 
             list.innerHTML = '';
-            let completedCount = 0;
             const totalCount = FLOORS.length;
+            let checkerCount = 0;
+            let managerApprovalCount = 0;
+            let leaderApprovalCount = 0;
 
             // 모든 층을 순회하며 데이터 유무 확인 및 렌더링
             FLOORS.forEach(floor => {
                 const tr = document.createElement('tr');
                 const targetDept = String(floor).replace(/\s/g, '');
 
-                // 해당 층의 최신 데이터 찾기 (filtered가 이미 최신순이므로 첫 번째 매칭 항목 사용)
-                const item = filtered.find(i => {
-                    return String(i.department || '').replace(/\s/g, '') === targetDept;
-                });
+                const floorSummary = floorSummaryMap.get(targetDept);
+                // 해당 층의 최신(최종) 데이터(표시용)
+                const item = floorSummary ? floorSummary.latestItem : null;
 
                 if (item) {
-                    completedCount++;
                     tr.onclick = () => showRecordActions(item);
+
+                    const hasSubmitter = !!floorSummary.hasSubmitter;
+                    const missingManager = hasSubmitter && !floorSummary.hasManagerApproval;
+                    const missingLeader = hasSubmitter && !floorSummary.hasLeaderApproval;
+
+                    if (floorSummary.hasSubmitter) checkerCount += 1;
+                    if (floorSummary.hasManagerApproval) managerApprovalCount += 1;
+                    if (floorSummary.hasLeaderApproval) leaderApprovalCount += 1;
+
+                    if (missingManager && missingLeader) {
+                        tr.classList.add('row-missing-approval-both');
+                    } else if (missingManager) {
+                        tr.classList.add('row-missing-manager-only');
+                    } else if (missingLeader) {
+                        tr.classList.add('row-missing-leader-only');
+                    }
 
                     // 제출일시 표시 (Number 변환으로 안정성 확보)
                     const d = new Date(Number(item.id));
@@ -980,7 +1083,14 @@
             });
 
             // 현황 카운트 업데이트 (루프 완료 후)
-            document.getElementById('statusCount').innerText = `${selectedDate} 현황 (${completedCount}/${totalCount} 완료)`;
+            document.getElementById('statusCount').innerHTML = `
+                <div class="status-summary">
+                    <span>${selectedDate} 현황</span>
+                    <span class="status-chip checker">점검자 ${checkerCount}/${totalCount}</span>
+                    <span class="status-chip manager">담당 ${managerApprovalCount}/${totalCount}</span>
+                    <span class="status-chip leader">팀장 ${leaderApprovalCount}/${totalCount}</span>
+                </div>
+            `;
         }
 
         let currentItem = null;
@@ -1035,11 +1145,6 @@
                 modalCanvas.width = window.innerWidth * r;
                 modalCanvas.height = (window.innerHeight - 250) * r;
                 modalCtx.scale(r, r);
-                
-                // 배경색 흰색 채우기 (JPEG 압축 대응)
-                modalCtx.fillStyle = 'white';
-                modalCtx.fillRect(0, 0, window.innerWidth, window.innerHeight - 250);
-                
                 modalCtx.strokeStyle = '#222';
                 modalCtx.lineWidth = 3;
                 modalCtx.lineCap = 'round';
@@ -1080,8 +1185,7 @@
             modalCanvas.addEventListener('touchend', stop);
 
             btnSigClear.addEventListener('click', () => {
-                modalCtx.fillStyle = 'white';
-                modalCtx.fillRect(0, 0, modalCanvas.width, modalCanvas.height);
+                modalCtx.clearRect(0, 0, modalCanvas.width, modalCanvas.height);
                 hasSignature = false;
             });
 
@@ -1095,8 +1199,7 @@
                     alert('서명을 해주세요.');
                     return;
                 }
-                // 미리보기 표시 (JPEG 0.6 압축 적용하여 모바일 전송 안정성 확보)
-                const dataUrl = modalCanvas.toDataURL('image/jpeg', 0.6);
+                const dataUrl = modalCanvas.toDataURL();
                 
                 if (sigMode === 'edit') {
                     currentEditingSig = dataUrl;
@@ -1115,9 +1218,7 @@
                 sigMode = 'edit';
                 sigModal.style.display = 'flex';
                 document.body.style.overflow = 'hidden';
-                
-                modalCtx.fillStyle = 'white';
-                modalCtx.fillRect(0, 0, modalCanvas.width, modalCanvas.height);
+                modalCtx.clearRect(0, 0, modalCanvas.width, modalCanvas.height);
                 hasSignature = false;
             });
         }
@@ -1127,9 +1228,7 @@
             sigMode = type;
             sigModal.style.display = 'flex';
             document.body.style.overflow = 'hidden';
-            
-            modalCtx.fillStyle = 'white';
-            modalCtx.fillRect(0, 0, modalCanvas.width, modalCanvas.height);
+            modalCtx.clearRect(0, 0, modalCanvas.width, modalCanvas.height);
             hasSignature = false;
         }
 
@@ -1163,10 +1262,8 @@
                     const submission = {
                         ...updatedItem,
                         action: 'overwrite',
-                        oldId: String(currentItem.id)
+                        oldId: currentItem.id
                     };
-                    
-                    // fetch 방식으로 통일 (안정성 확보)
                     fetch(GAS_URL, {
                         method: 'POST',
                         mode: 'no-cors',
@@ -1174,9 +1271,9 @@
                         body: JSON.stringify(submission)
                     });
                     
-                    // 캐시 업데이트
+                    // 캐시 업데이트 (관리자 페이지 내부 즉시 반영용)
                     if (typeof cachedData !== 'undefined') {
-                        const cIdx = cachedData.findIndex(i => String(i.id) === String(currentItem.id));
+                        const cIdx = cachedData.findIndex(i => i.id === currentItem.id);
                         if (cIdx !== -1) cachedData[cIdx] = updatedItem;
                     }
                 } catch (err) { console.error('Approval sync error:', err); }
@@ -1187,13 +1284,8 @@
 
         function openEdit(id) {
             currentId = id;
-            // 전체 데이터(병합 데이터)에서 검색하도록 수정
-            const data = getMergedData();
-            const item = data.find(i => String(i.id) === String(id));
-            if (!item) {
-                alert('해당 기록을 찾을 수 없습니다.');
-                return;
-            }
+            const data = JSON.parse(localStorage.getItem('security_check_data') || '[]');
+            const item = data.find(i => i.id === id);
 
             document.getElementById('actionView').style.display = 'none';
             document.getElementById('sigView').style.display = 'none';
@@ -1237,13 +1329,12 @@
         }
 
         async function saveChanges() {
-            // 전체 병합 데이터에서 검색
-            const mergedData = getMergedData();
-            const itemToUpdate = mergedData.find(i => String(i.id) === String(currentId));
-            if (!itemToUpdate) return;
+            const data = JSON.parse(localStorage.getItem('security_check_data') || '[]');
+            const idx = data.findIndex(i => i.id === currentId);
+            if (idx === -1) return;
 
             // 원본 데이터 복사 및 수정 사항 반영
-            const updatedItem = { ...itemToUpdate };
+            const updatedItem = { ...data[idx] };
             updatedItem.submitTime = document.getElementById('edit_submitTime').value;
             updatedItem.department = document.getElementById('edit_department').value;
             updatedItem.checkerType = document.getElementById('edit_checkerType').value;
@@ -1259,15 +1350,9 @@
                 }
             }
 
-            // 1. 로컬 스토리지 업데이트 (항목이 없으면 새로 추가하여 동기화)
-            let localData = JSON.parse(localStorage.getItem('security_check_data') || '[]');
-            let lIdx = localData.findIndex(i => String(i.id) === String(currentId));
-            if (lIdx === -1) {
-                localData.push(updatedItem);
-            } else {
-                localData[lIdx] = updatedItem;
-            }
-            localStorage.setItem('security_check_data', JSON.stringify(localData));
+            // 1. 로컬 스토리지 업데이트
+            data[idx] = updatedItem;
+            localStorage.setItem('security_check_data', JSON.stringify(data));
 
             // 2. 구글 드라이브(GAS) 업데이트 알림 (기존 행 삭제 후 새 데이터 추가 방식)
             if (GAS_URL && !GAS_URL.includes('YOUR_GAS_WEB_APP_URL_HERE')) {
@@ -1287,11 +1372,9 @@
                     });
 
                     // 관리자 페이지 내부 캐시(cachedData)도 즉시 반영
-                    if (typeof cachedData !== 'undefined') {
-                        const cacheIdx = cachedData.findIndex(i => String(i.id) === String(currentId));
-                        if (cacheIdx !== -1) {
-                            cachedData[cacheIdx] = updatedItem;
-                        }
+                    const cacheIdx = cachedData.findIndex(i => i.id === currentId);
+                    if (cacheIdx !== -1) {
+                        cachedData[cacheIdx] = updatedItem;
                     }
                     console.log('구글 드라이브 업데이트 요청 전송 완료');
                 } catch (err) {
@@ -1309,20 +1392,22 @@
 
             // 로컬 스토리지 삭제
             const data = JSON.parse(localStorage.getItem('security_check_data') || '[]');
-            localStorage.setItem('security_check_data', JSON.stringify(data.filter(i => String(i.id) !== String(id))));
+            localStorage.setItem('security_check_data', JSON.stringify(data.filter(i => i.id !== id)));
 
             // 구글 드라이브 삭제 전송
             if (GAS_URL && !GAS_URL.includes('YOUR_GAS_WEB_APP_URL_HERE')) {
                 try {
                     // mode: 'no-cors'를 쓰면 성공 여부를 알 순 없지만 전송은 됨. 
+                    // 하지만 삭제 확인을 위해 일반 fetch 고려 (CORS 설정 필수)
                     await fetch(GAS_URL, {
                         method: 'POST',
                         mode: 'no-cors',
+                        // text/plain을 사용하여 CORS preflight(사전 요청) 없이 전송
                         headers: { 'Content-Type': 'text/plain' },
-                        body: JSON.stringify({ action: 'delete', id: String(id) })
+                        body: JSON.stringify({ action: 'delete', id: id })
                     });
                     // 캐시 업데이트
-                    cachedData = cachedData.filter(i => String(i.id) !== String(id));
+                    cachedData = cachedData.filter(i => i.id !== id);
                 } catch (err) {
                     console.error('Delete error:', err);
                     alert('구글 드라이브 삭제 요청 중 오류가 발생했습니다.');
@@ -1334,28 +1419,21 @@
         }
 
         function exportOfficialPDF() {
-            // 인쇄 옵션 모달 기본값 세팅 (이번 주 월요일 ~ 일요일)
+            // 인쇄 옵션 모달 기본값 세팅 (일주일 전 ~ 오늘)
             const today = new Date();
-            const day = today.getDay(); // 0(일) ~ 6(토)
-            
-            // 월요일 계산 (오늘에서 현재 요일-1 만큼 뺌, 일요일(0)인 경우 6일 전)
-            const diffToMonday = (day === 0 ? -6 : 1 - day);
-            const monday = new Date(today);
-            monday.setDate(today.getDate() + diffToMonday);
-            
-            // 일요일 계산 (월요일 + 6일)
-            const sunday = new Date(monday);
-            sunday.setDate(monday.getDate() + 6);
-            
-            const formatDate = (d) => {
-                const y = d.getFullYear();
-                const m = String(d.getMonth() + 1).padStart(2, '0');
-                const dd = String(d.getDate()).padStart(2, '0');
-                return `${y}-${m}-${dd}`;
-            };
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            const todayStr = `${yyyy}-${mm}-${dd}`;
 
-            document.getElementById('pdfStartDate').value = formatDate(monday);
-            document.getElementById('pdfEndDate').value = formatDate(sunday);
+            const lastWeek = new Date(today.getTime() - 6 * 24 * 60 * 60 * 1000);
+            const lw_yyyy = lastWeek.getFullYear();
+            const lw_mm = String(lastWeek.getMonth() + 1).padStart(2, '0');
+            const lw_dd = String(lastWeek.getDate()).padStart(2, '0');
+            const lwStr = `${lw_yyyy}-${lw_mm}-${lw_dd}`;
+
+            document.getElementById('pdfStartDate').value = lwStr;
+            document.getElementById('pdfEndDate').value = todayStr;
             document.getElementById('pdfFloorSelector').value = '1층';
 
             document.getElementById('pdfOptionsModal').style.display = 'flex';
@@ -1451,12 +1529,24 @@
             filtered.forEach(item => {
                 const dateKey = getYYYYMMDD(item.checkDate);
                 if (!dateKey) return;
-                if (!grouped[dateKey]) grouped[dateKey] = { '최종퇴청자': null, '당직근무자': null };
-                
-                // 타입 매칭 시 공백 등 정제하여 할당 (이미 최신순이므로 먼저 할당된 데이터 유지)
-                const type = String(item.checkerType || '').trim();
-                if ((type === '최종퇴청자' || type === '당직근무자') && !grouped[dateKey][type]) {
-                    grouped[dateKey][type] = item;
+                if (!grouped[dateKey]) {
+                    grouped[dateKey] = {
+                        '최종퇴청자': null,
+                        '당직근무자': null,
+                        managerSignature: '',
+                        leaderSignature: ''
+                    };
+                }
+                // filtered는 최신순이므로 타입별 첫 1건이 최종값
+                if (!grouped[dateKey][item.checkerType]) {
+                    grouped[dateKey][item.checkerType] = item;
+                }
+                // 결재 서명은 해당 날짜/층의 어떤 제출 데이터에라도 있으면 채택
+                if (!grouped[dateKey].managerSignature && item.managerSignature) {
+                    grouped[dateKey].managerSignature = item.managerSignature;
+                }
+                if (!grouped[dateKey].leaderSignature && item.leaderSignature) {
+                    grouped[dateKey].leaderSignature = item.leaderSignature;
                 }
             });
 
@@ -1558,16 +1648,10 @@
                 if (dayData) {
                     const getVal = (type, itemKey) => {
                         const submission = dayData[type];
-                        if (!submission || !submission.items) return '';
-                        
-                        // 데이터 안전하게 추출 및 정제
-                        const itemData = submission.items[itemKey];
-                        let val = String(itemData?.value || '').trim();
-                        
-                        // 양호/불량 -> O/X 변환 (다양한 입력값 대응)
-                        if (val === '양호' || val === 'O' || val === 'o' || val === 'ok') return 'O';
-                        if (val === '불량' || val === 'X' || val === 'x' || val === 'no') return 'X';
-                        
+                        if (!submission) return '';
+                        const val = submission.items[itemKey]?.value || '';
+                        if (val === '양호') return 'O';
+                        if (val === '불량') return 'X';
                         return val;
                     };
 
@@ -1591,11 +1675,9 @@
                         return submission[infoKey] || '';
                     };
 
-                    // 4/1 추가: 최종퇴청자 및 당직근무자 데이터에서 담당/팀장 서명을 각각 수집
-                    const mSig = (dayData['최종퇴청자'] && dayData['최종퇴청자'].managerSignature) || 
-                                 (dayData['당직근무자'] && dayData['당직근무자'].managerSignature) || '';
-                    const lSig = (dayData['최종퇴청자'] && dayData['최종퇴청자'].leaderSignature) || 
-                                 (dayData['당직근무자'] && dayData['당직근무자'].leaderSignature) || '';
+                    // 결재 서명은 해당 날짜/층의 제출 기록 전체에서 수집된 값 사용
+                    const mSig = dayData.managerSignature || '';
+                    const lSig = dayData.leaderSignature || '';
 
                     tr.innerHTML = `
                         <td class="font-bold" style="line-height:1.2;">${dayStr}</td>
