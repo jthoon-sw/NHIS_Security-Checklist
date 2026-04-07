@@ -1543,32 +1543,31 @@
                 const dateKey = getYYYYMMDD(item.checkDate);
                 if (!dateKey) return;
                 if (!grouped[dateKey]) {
+                    // 처음 만나는 데이터가 시간상 가장 최신임 (전체 1건 채택)
                     grouped[dateKey] = {
                         '최종퇴청자': null,
                         '당직근무자': null,
-                        managerSignature: '',
-                        leaderSignature: ''
+                        managerSignature: item.managerSignature || '',
+                        leaderSignature: item.leaderSignature || ''
                     };
-                }
-                
-                // 타입 판별 로직 강화 (root의 checkerType 우선, 없으면 items 내부 확인)
-                let resolvedType = item.checkerType || (item.items && item.items.item1 && item.items.item1.type) || '최종퇴청자';
-                resolvedType = String(resolvedType).replace(/\s/g, ''); // 모든 공백 제거
-                
-                // 매칭 시 시각적 일치를 위해 정확한 키로 보정
-                if (resolvedType.includes('당직')) resolvedType = '당직근무자';
-                else if (resolvedType.includes('최종') || resolvedType.includes('퇴청')) resolvedType = '최종퇴청자';
-                else resolvedType = '최종퇴청자'; // 기본값
+                    
+                    // 타입 판별 (root의 checkerType 우선, 없으면 items 내부 확인)
+                    let resolvedType = item.checkerType || (item.items && item.items.item1 && item.items.item1.type) || '최종퇴청자';
+                    resolvedType = String(resolvedType).replace(/\s/g, '');
+                    
+                    if (resolvedType.includes('당직')) resolvedType = '당직근무자';
+                    else resolvedType = '최종퇴청자';
 
-                if (!grouped[dateKey][resolvedType]) {
                     grouped[dateKey][resolvedType] = item;
-                }
-                // 결재 서명은 해당 날짜/층의 어떤 제출 데이터에라도 있으면 채택
-                if (!grouped[dateKey].managerSignature && item.managerSignature) {
-                    grouped[dateKey].managerSignature = item.managerSignature;
-                }
-                if (!grouped[dateKey].leaderSignature && item.leaderSignature) {
-                    grouped[dateKey].leaderSignature = item.leaderSignature;
+                } else {
+                    // 이미 해당 날짜의 최신 대표 기록이 선정되었으므로 이후 데이터는 무시.
+                    // 단, 결재 서명 정보가 있다면 유실 방지를 위해 병합.
+                    if (!grouped[dateKey].managerSignature && item.managerSignature) {
+                        grouped[dateKey].managerSignature = item.managerSignature;
+                    }
+                    if (!grouped[dateKey].leaderSignature && item.leaderSignature) {
+                        grouped[dateKey].leaderSignature = item.leaderSignature;
+                    }
                 }
             });
 
@@ -1675,13 +1674,32 @@
                         // [강화] 인덱스 번호 추출 (1, 2, 3, 4)
                         const itemIdx = parseInt(itemKey.replace(/[^0-9]/g, ''));
                         
+                        // O, X 판별 헬퍼 (양호/정상/O/OK -> O, 불량/이상/X/NG -> X)
+                        const interpretValue = (v) => {
+                            if (!v) return null;
+                            const s = String(v).replace(/\s/g, '').toUpperCase();
+                            if (s.includes('양호') || s.includes('정상') || s === 'O' || s === 'OK' || s === 'TRUE') return 'O';
+                            if (s.includes('불량') || s.includes('이상') || s === 'X' || s.includes('NG') || s === 'FALSE') return 'X';
+                            return null;
+                        };
+
+                        const itemsStr = String(submission.items || '');
+                        // 1단계: 비표준 데이터 형식 ({item1={value=양호}, ...}) 대응 [정규표현식 기반]
+                        if (itemsStr.includes('=') && (itemsStr.includes(itemKey) || itemsStr.includes('item' + itemIdx))) {
+                             // item1={value=양호} 또는 item1=양호 패턴 모두 대응
+                             const regex = new RegExp('(?:' + itemKey + '|item' + itemIdx + ')\\s*=\\s*(?:\\{value=)?([^,} } ]+)(?:\\})?');
+                             const match = itemsStr.match(regex);
+                             if (match) {
+                                 const res = interpretValue(match[1]);
+                                 if (res) return res;
+                             }
+                        }
+
                         // [옴니 서치] 지능형 키 검색 헬퍼
                         const findInObj = (obj) => {
                             if (!obj || typeof obj !== 'object') return null;
                             const keys = Object.keys(obj);
-                            // 1. 대소문자 무시 완전 일치 (item1, Item1, ITEM1 ...)
                             let found = keys.find(k => k.toLowerCase() === itemKey.toLowerCase());
-                            // 2. 유사 패턴 매칭 (항목1, 1번, Item_1, [1] 등)
                             if (!found) {
                                 found = keys.find(k => {
                                     const kLower = k.toLowerCase();
@@ -1690,10 +1708,8 @@
                                            (kLower.length < 5 && kLower.includes(String(itemIdx)));
                                 });
                             }
-                            
                             if (found) {
                                 const v = obj[found];
-                                // 객체 {value: '...'} 형태이거나 단순 값인 경우 모두 처리
                                 return (typeof v === 'object' && v !== null) ? (v.value || '') : v;
                             }
                             return null;
@@ -1711,28 +1727,20 @@
                         }
 
                         let target = null;
-                        // 1단계: items 내부 조사 (배열 vs 객체)
+                        // 2단계: items 내부 조사 (배열 vs 객체)
                         if (Array.isArray(items)) {
                             target = items[itemIdx - 1];
                         } else {
                             target = findInObj(items);
                         }
                         
-                        // 2단계: root 레벨 전수 조사 (Omni-Search)
+                        // 3단계: root 레벨 전수 조사 (Omni-Search)
                         if (target === null || target === undefined) {
                             target = findInObj(submission);
                         }
 
-                        if (target === null || target === undefined) return '';
-
-                        // 지능형 키워드 판별 (양호/정상/O/OK/TRUE -> O, 불량/이상/X/NG/FALSE -> X)
-                        const raw = String(target).replace(/\s/g, '').toUpperCase();
-                        if (!raw) return '';
-                        
-                        if (raw.includes('양호') || raw.includes('정상') || raw === 'O' || raw === 'OK' || raw === 'TRUE') return 'O';
-                        if (raw.includes('불량') || raw.includes('이상') || raw === 'X' || raw.includes('NG') || raw === 'FALSE') return 'X';
-                        
-                        return String(target);
+                        const finalRes = interpretValue(target);
+                        return finalRes || (target !== null && target !== undefined ? String(target) : '');
                     };
 
                     const getInfo = (type, infoKey) => {
