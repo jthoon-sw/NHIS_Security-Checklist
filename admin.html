@@ -1419,21 +1419,30 @@
         }
 
         function exportOfficialPDF() {
-            // 인쇄 옵션 모달 기본값 세팅 (일주일 전 ~ 오늘)
+            // 인쇄 옵션 모달 기본값 세팅 (오늘 기준 이번 주 월요일 ~ 일요일)
             const today = new Date();
-            const yyyy = today.getFullYear();
-            const mm = String(today.getMonth() + 1).padStart(2, '0');
-            const dd = String(today.getDate()).padStart(2, '0');
-            const todayStr = `${yyyy}-${mm}-${dd}`;
+            const day = today.getDay(); // 0(일), 1(월), ..., 6(토)
+            
+            // 이번 주 월요일 계산
+            // 일요일(0)이면 6일 전, 나머지는 (요일-1)일 전
+            const mondayDiff = day === 0 ? 6 : day - 1;
+            const monday = new Date(today);
+            monday.setDate(today.getDate() - mondayDiff);
+            
+            // 이번 주 일요일 계산 (월요일 + 6일)
+            const sunday = new Date(monday);
+            sunday.setDate(monday.getDate() + 6);
 
-            const lastWeek = new Date(today.getTime() - 6 * 24 * 60 * 60 * 1000);
-            const lw_yyyy = lastWeek.getFullYear();
-            const lw_mm = String(lastWeek.getMonth() + 1).padStart(2, '0');
-            const lw_dd = String(lastWeek.getDate()).padStart(2, '0');
-            const lwStr = `${lw_yyyy}-${lw_mm}-${lw_dd}`;
+            // 포맷팅 함수
+            const formatYMD = (date) => {
+                const y = date.getFullYear();
+                const m = String(date.getMonth() + 1).padStart(2, '0');
+                const d = String(date.getDate()).padStart(2, '0');
+                return `${y}-${m}-${d}`;
+            };
 
-            document.getElementById('pdfStartDate').value = lwStr;
-            document.getElementById('pdfEndDate').value = todayStr;
+            document.getElementById('pdfStartDate').value = formatYMD(monday);
+            document.getElementById('pdfEndDate').value = formatYMD(sunday);
             document.getElementById('pdfFloorSelector').value = '1층';
 
             document.getElementById('pdfOptionsModal').style.display = 'flex';
