@@ -1533,6 +1533,17 @@
                 return itemDate >= startYYYYMMDD && itemDate <= endYYYYMMDD;
             });
 
+            // 데이터 전처리: items 필드가 문자열(JSON string) 형태인 경우 객체로 파싱
+            filtered.forEach(item => {
+                if (typeof item.items === 'string' && item.items.trim().startsWith('{')) {
+                    try {
+                        item.items = JSON.parse(item.items);
+                    } catch (e) {
+                        console.error('Item parsing error:', item.id, e);
+                    }
+                }
+            });
+
             // 날짜별 그룹화 (키를 YYYY-MM-DD로 통일)
             const grouped = {};
             filtered.forEach(item => {
@@ -1549,7 +1560,7 @@
                 
                 // 타입 판별 로직 강화 (root의 checkerType 우선, 없으면 items 내부 확인)
                 let resolvedType = item.checkerType || (item.items && item.items.item1 && item.items.item1.type) || '최종퇴청자';
-                resolvedType = String(resolvedType).trim();
+                resolvedType = String(resolvedType).replace(/\s/g, ''); // 모든 공백 제거
                 
                 // 매칭 시 시각적 일치를 위해 정확한 키로 보정
                 if (resolvedType.includes('당직')) resolvedType = '당직근무자';
@@ -1668,16 +1679,36 @@
                         const submission = dayData[type];
                         if (!submission) return '';
                         
-                        let val = '';
-                        if (submission.items && submission.items[itemKey]) {
-                            const itm = submission.items[itemKey];
-                            // itm이 객체 { value: "양호" } 인지 아니면 단순 값 "양호" 인지 확인
-                            val = (typeof itm === 'object' && itm !== null) ? (itm.value || '') : itm;
+                        // submission.items가 문자열인 경우 대응 (안전 장치)
+                        let itemsObj = submission.items;
+                        if (typeof itemsObj === 'string' && itemsObj.trim().startsWith('{')) {
+                            try { itemsObj = JSON.parse(itemsObj); } catch(e) {}
                         }
+
+                        let target = null;
+                        // 1. items 객체 내부 검색
+                        if (itemsObj && itemsObj[itemKey]) {
+                            target = itemsObj[itemKey];
+                        }
+                        // 2. root에서 직접 검색 (Flat 구조 호환)
+                        else if (submission[itemKey]) {
+                            target = submission[itemKey];
+                        }
+
+                        if (target === null || target === undefined) return '';
+
+                        // 값 추출 (객체 {value:...} 형태이거나 단순 값인 경우)
+                        let rawVal = (typeof target === 'object' && target !== null) ? (target.value || '') : target;
                         
-                        if (val === '양호') return 'O';
-                        if (val === '불량') return 'X';
-                        return val;
+                        // 문자열 정규화 (모든 공백 제거)
+                        const normalizedVal = String(rawVal).replace(/\s/g, '');
+                        if (!normalizedVal) return '';
+
+                        // 유연한 매칭 (양호/정상/O -> O, 불량/이상/X -> X)
+                        if (normalizedVal.includes('양호') || normalizedVal === 'O' || normalizedVal.includes('정상')) return 'O';
+                        if (normalizedVal.includes('불량') || normalizedVal === 'X' || normalizedVal.includes('이상')) return 'X';
+                        
+                        return rawVal;
                     };
 
                     const getInfo = (type, infoKey) => {
