@@ -569,158 +569,10 @@
             font-style: normal;
             font-size: 1.2rem;
         }
-
-        /* 1분 제한 시간 타이머 스타일 */
-        .floating-timer {
-            position: fixed;
-            top: 15px;
-            right: 15px;
-            background: rgba(255, 255, 255, 0.95);
-            border: 2px solid var(--nhis-red);
-            padding: 8px 16px;
-            border-radius: 50px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            z-index: 1001;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-            font-family: 'Noto Sans KR', sans-serif;
-            font-weight: 700;
-        }
-
-        .floating-timer .pulse-dot {
-            width: 8px;
-            height: 8px;
-            background-color: var(--nhis-red);
-            border-radius: 50%;
-            box-shadow: 0 0 8px var(--nhis-red);
-            animation: timer-blink 1s infinite alternate;
-        }
-
-        .floating-timer span {
-            font-size: 1.1rem;
-            color: var(--nhis-red);
-            letter-spacing: 0.5px;
-        }
-
-        /* 만료 화면 전용 CSS 스타일 */
-        .expired-container {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: var(--nhis-gray-bg);
-            z-index: 9999;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-        }
-
-        .expired-card {
-            width: 90%;
-            max-width: 450px;
-            background: var(--white);
-            border: 1px solid var(--nhis-border);
-            border-top: 5px solid var(--nhis-red);
-            border-radius: var(--nhis-radius);
-            padding: 40px 30px;
-            text-align: center;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-            animation: timer-shake 0.5s ease-in-out;
-        }
-
-        .expired-icon {
-            width: 70px;
-            height: 70px;
-            background: #fff5f5;
-            border: 2px solid var(--nhis-red);
-            color: var(--nhis-red);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2.2rem;
-            font-weight: 800;
-            margin: 0 auto 20px;
-            box-shadow: 0 0 15px rgba(230, 0, 18, 0.2);
-            animation: timer-blink-red 1.5s infinite alternate;
-        }
-
-        .expired-card h2 {
-            font-size: 1.4rem;
-            font-weight: 700;
-            color: var(--nhis-text);
-            margin-bottom: 12px;
-        }
-
-        .expired-card p {
-            color: var(--nhis-muted);
-            font-size: 0.9rem;
-            line-height: 1.6;
-        }
-
-        /* 애니메이션 정의 */
-        @keyframes timer-blink {
-            from {
-                opacity: 0.3;
-            }
-
-            to {
-                opacity: 1;
-            }
-        }
-
-        @keyframes timer-blink-red {
-            from {
-                box-shadow: 0 0 5px rgba(230, 0, 18, 0.3);
-            }
-
-            to {
-                box-shadow: 0 0 18px rgba(230, 0, 18, 0.6);
-            }
-        }
-
-        @keyframes timer-shake {
-
-            0%,
-            100% {
-                transform: translateX(0);
-            }
-
-            20%,
-            60% {
-                transform: translateX(-6px);
-            }
-
-            40%,
-            80% {
-                transform: translateX(6px);
-            }
-        }
-
-        @media (max-width: 600px) {
-            .floating-timer {
-                top: 10px;
-                right: 10px;
-                padding: 6px 12px;
-            }
-
-            .floating-timer span {
-                font-size: 0.95rem;
-            }
-        }
     </style>
 </head>
 
 <body>
-    <!-- 우측 상단 플로팅 타이머 위젯 -->
-    <div class="floating-timer" id="floatingTimer">
-        <div class="pulse-dot"></div>
-        <span id="floatingTimerText">01:00</span>
-    </div>
-
     <div class="header-top">
         <div class="logo-area">
             <img src="logo.png" alt="인천경기지역본부 로고" class="logo-img">
@@ -794,8 +646,8 @@
                                 <td>1. 화재 단속 상태</td>
                                 <td>
                                     <div class="item-status-group">
-                                        <label class="radio-option"><input type="radio" name="item1" value="양호" required
-                                                checked> 양호</label>
+                                        <label class="radio-option"><input type="radio" name="item1" value="양호"
+                                                required checked> 양호</label>
                                         <label class="radio-option"><input type="radio" name="item1" value="불량">
                                             불량</label>
                                     </div>
@@ -805,8 +657,8 @@
                                 <td>2. 소등 및 각종 전원 상태</td>
                                 <td>
                                     <div class="item-status-group">
-                                        <label class="radio-option"><input type="radio" name="item2" value="양호" required
-                                                checked> 양호</label>
+                                        <label class="radio-option"><input type="radio" name="item2" value="양호"
+                                                required checked> 양호</label>
                                         <label class="radio-option"><input type="radio" name="item2" value="불량">
                                             불량</label>
                                     </div>
@@ -816,8 +668,8 @@
                                 <td>3. 서류보관/잠금장치 상태</td>
                                 <td>
                                     <div class="item-status-group">
-                                        <label class="radio-option"><input type="radio" name="item3" value="양호" required
-                                                checked> 양호</label>
+                                        <label class="radio-option"><input type="radio" name="item3" value="양호"
+                                                required checked> 양호</label>
                                         <label class="radio-option"><input type="radio" name="item3" value="불량">
                                             불량</label>
                                     </div>
@@ -827,8 +679,8 @@
                                 <td>4. 문단속 상태</td>
                                 <td>
                                     <div class="item-status-group">
-                                        <label class="radio-option"><input type="radio" name="item4" value="양호" required
-                                                checked> 양호</label>
+                                        <label class="radio-option"><input type="radio" name="item4" value="양호"
+                                                required checked> 양호</label>
                                         <label class="radio-option"><input type="radio" name="item4" value="불량">
                                             불량</label>
                                     </div>
@@ -898,81 +750,6 @@
                 history.scrollRestoration = 'manual';
             }
             window.scrollTo(0, 0);
-
-            // --- 1분 타이머 및 새로고침 방지 로직 시작 ---
-            const LIMIT_SECONDS = 60; // 1분 제한 시간 설정
-            const STORAGE_KEY = "security_check_session_time";
-
-            // URL의 from 파라미터 검사
-            const urlParams = new URLSearchParams(window.location.search);
-            const isFromQr = urlParams.get('from') === 'qr';
-
-            let firstVisit = localStorage.getItem(STORAGE_KEY);
-
-            if (isFromQr) {
-                // QR 코드로 새롭게 접속한 경우 -> 세션을 1분으로 초기화
-                firstVisit = Date.now().toString();
-                localStorage.setItem(STORAGE_KEY, firstVisit);
-
-                // 접속 성공 즉시 주소창에서 ?from=qr 파라미터를 숨겨서 새로고침(F5) 우회 시도 차단
-                if (window.history.replaceState) {
-                    const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
-                    window.history.replaceState({ path: cleanUrl }, '', cleanUrl);
-                }
-            } else {
-                // 직접 주소 입력, 주소 공유, 또는 새로고침 접속인 경우
-                if (firstVisit) {
-                    // 기존 유효 세션 잔여 시간 확인용 파싱
-                    firstVisit = parseInt(firstVisit, 10);
-                } else {
-                    // 유효한 QR 접속 정보가 없으므로 즉시 만료 차단 처리
-                    firstVisit = 0;
-                }
-            }
-
-            function updateTimer() {
-                const now = Date.now();
-                const elapsedSeconds = Math.floor((now - firstVisit) / 1000);
-                const remainingSeconds = LIMIT_SECONDS - elapsedSeconds;
-
-                if (remainingSeconds <= 0) {
-                    clearInterval(timerInterval);
-                    handleExpiration();
-                } else {
-                    const m = String(Math.floor(remainingSeconds / 60)).padStart(2, '0');
-                    const s = String(remainingSeconds % 60).padStart(2, '0');
-                    document.getElementById('floatingTimerText').innerText = `${m}:${s}`;
-                }
-            }
-
-            function handleExpiration() {
-                document.getElementById('floatingTimerText').innerText = "00:00";
-
-                // 타이머 위젯 및 메인 양식 숨기기
-                document.getElementById('floatingTimer').style.display = 'none';
-
-                const header = document.querySelector('.header-top');
-                const mainContent = document.querySelector('.main-content');
-                if (header) header.style.display = 'none';
-                if (mainContent) mainContent.style.display = 'none';
-
-                // 열려있을 수 있는 모달들 숨기기
-                const loginModal = document.getElementById('loginModal');
-                const sigModal = document.getElementById('signatureModal');
-                if (loginModal) loginModal.style.display = 'none';
-                if (sigModal) sigModal.style.display = 'none';
-
-                // 만료 전용 화면 렌더링
-                document.getElementById('expiredContainer').style.display = 'flex';
-
-                sessionExpired = true;
-                alert("페이지 접근 시간이 만료되었습니다.");
-            }
-
-            let sessionExpired = false;
-            updateTimer();
-            const timerInterval = setInterval(updateTimer, 1000);
-            // --- 1분 타이머 및 새로고침 방지 로직 끝 ---
 
             const dateInput = document.getElementById('checkDate');
             const today = new Date();
@@ -1102,10 +879,6 @@
             btnSigSubmit.addEventListener('click', handleSignatureConfirm);
 
             const validateAndSubmit = async () => {
-                if (sessionExpired) {
-                    alert('유효 시간이 초과되었습니다. 제출하실 수 없습니다.');
-                    return;
-                }
                 // 통합 검증 로직
                 const department = document.getElementById('department').value;
                 const position = document.getElementById('position').value;
@@ -1176,8 +949,6 @@
                         // 전송 개시 직후 성공 메시지 표시 (지연 현상 방지)
                         setTimeout(() => {
                             alert(`성공적으로 제출되었습니다.\n제출일시: ${submission.submitTime}\n\n※ 점검 데이터 전송이 완료되었습니다.`);
-                            localStorage.removeItem(STORAGE_KEY);
-                            localStorage.removeItem(STORAGE_QR_KEY);
                             location.reload();
                         }, 500);
                     } catch (err) {
@@ -1188,8 +959,6 @@
                     }
                 } else {
                     alert(`성공적으로 제출되었습니다(로컬 모드).\n제출일시: ${submission.submitTime}\n\n※ 구글 앱스 스크립트 웹 앱 URL이 설정되지 않아 로컬 스토리지에만 저장되었습니다.`);
-                    localStorage.removeItem(STORAGE_KEY);
-                    localStorage.removeItem(STORAGE_QR_KEY);
                     location.reload();
                 }
             };
@@ -1243,13 +1012,6 @@
             });
         });
     </script>
-
-    <!-- 접속 만료 화면 (기본 숨김) -->
-    <div class="expired-container" id="expiredContainer">
-        <div class="expired-card">
-            <h2>접속 시간이 만료되었습니다</h2>
-        </div>
-    </div>
 
 </body>
 
