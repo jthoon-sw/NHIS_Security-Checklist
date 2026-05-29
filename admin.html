@@ -946,6 +946,24 @@
             return String(s).substring(0, 10);
         };
 
+        // 결재 서명 추출 헬퍼 함수 (서버 미반환 필드 대응을 위해 items 객체 내 매핑 지원)
+        const extractSignature = (item, type) => {
+            if (!item) return "";
+            const key = (type === "manager") ? "managerSignature" : "leaderSignature";
+            
+            // 1. 루트 필드에 서명이 있는 경우 우선 채택
+            if (item[key]) return item[key];
+            
+            // 2. items 필드가 문자열이고 내부에 서명이 있는 경우 정규표현식 파싱
+            const itemsStr = String(item.items || "");
+            if (itemsStr) {
+                const regex = new RegExp(key + "\\s*=\\s*([^,}]+)");
+                const match = itemsStr.match(regex);
+                if (match) return match[1];
+            }
+            return "";
+        };
+
         // 데이터 로드 헬퍼 함수 (로컬 데이터 제외, 구글 서버 데이터만 사용)
         function getMergedData() {
             // 1. 서버 데이터 캐시를 역순으로 복사 (시트 하단에 추가된 수정본에 우선권을 주기 위함)
@@ -990,8 +1008,8 @@
                 }
                 const summary = summaryMap.get(dept);
                 if (item.userName || item.signature) summary.hasSubmitter = true;
-                if (item.managerSignature) summary.hasManagerApproval = true;
-                if (item.leaderSignature) summary.hasLeaderApproval = true;
+                if (extractSignature(item, 'manager')) summary.hasManagerApproval = true;
+                if (extractSignature(item, 'leader')) summary.hasLeaderApproval = true;
             });
             return summaryMap;
         }
@@ -1255,6 +1273,46 @@
             if (type === 'manager') updatedItem.managerSignature = dataUrl;
             if (type === 'leader') updatedItem.leaderSignature = dataUrl;
             
+            // [서버 미반환 필드 우회] items 객체 내부에 서명 정보 주입
+            let itemsObj = {};
+            if (updatedItem.items) {
+                if (typeof updatedItem.items === 'object') {
+                    itemsObj = { ...updatedItem.items };
+                } else if (typeof updatedItem.items === 'string') {
+                    const trimmed = updatedItem.items.trim();
+                    if (trimmed.startsWith('{')) {
+                        try {
+                            itemsObj = JSON.parse(trimmed);
+                        } catch (e) {
+                            const pairs = trimmed.substring(1, trimmed.length - 1).split(/,\s*/);
+                            pairs.forEach(pair => {
+                                const splitIdx = pair.indexOf('=');
+                                if (splitIdx !== -1) {
+                                    const key = pair.substring(0, splitIdx).trim();
+                                    let val = pair.substring(splitIdx + 1).trim();
+                                    if (val.startsWith('{') && val.endsWith('}')) {
+                                        const subPairs = val.substring(1, val.length - 1).split(/,\s*/);
+                                        const subObj = {};
+                                        subPairs.forEach(subPair => {
+                                            const subSplitIdx = subPair.indexOf('=');
+                                            if (subSplitIdx !== -1) {
+                                                subObj[subPair.substring(0, subSplitIdx).trim()] = subPair.substring(subSplitIdx + 1).trim();
+                                            }
+                                        });
+                                        itemsObj[key] = subObj;
+                                    } else {
+                                        itemsObj[key] = val;
+                                    }
+                                }
+                            });
+                        }
+                    }
+                }
+            }
+            if (type === 'manager') itemsObj.managerSignature = dataUrl;
+            if (type === 'leader') itemsObj.leaderSignature = dataUrl;
+            updatedItem.items = itemsObj;
+            
             updatedItem.modifiedAt = Date.now(); // 수정 일시 업데이트
             updatedItem.lastModified = updatedItem.modifiedAt;
 
@@ -1391,9 +1449,44 @@
             // [강화] 수정 시각 기록 (동일 ID 중 최우선 채택을 위함)
             updatedItem.modifiedAt = Date.now();
 
+            // 기존 items에 들어있던 서명 정보 추출하여 유실 방지
+            const existingManagerSig = extractSignature(item, 'manager');
+            const existingLeaderSig = extractSignature(item, 'leader');
+
             // 점검 항목 업데이트
             if (!updatedItem.items || typeof updatedItem.items !== 'object') {
-                updatedItem.items = {};
+                let itemsObj = {};
+                if (typeof updatedItem.items === 'string') {
+                    const trimmed = updatedItem.items.trim();
+                    if (trimmed.startsWith('{')) {
+                        try {
+                            itemsObj = JSON.parse(trimmed);
+                        } catch (e) {
+                            const pairs = trimmed.substring(1, trimmed.length - 1).split(/,\s*/);
+                            pairs.forEach(pair => {
+                                const splitIdx = pair.indexOf('=');
+                                if (splitIdx !== -1) {
+                                    const key = pair.substring(0, splitIdx).trim();
+                                    let val = pair.substring(splitIdx + 1).trim();
+                                    if (val.startsWith('{') && val.endsWith('}')) {
+                                        const subPairs = val.substring(1, val.length - 1).split(/,\s*/);
+                                        const subObj = {};
+                                        subPairs.forEach(subPair => {
+                                            const subSplitIdx = subPair.indexOf('=');
+                                            if (subSplitIdx !== -1) {
+                                                subObj[subPair.substring(0, subSplitIdx).trim()] = subPair.substring(subSplitIdx + 1).trim();
+                                            }
+                                        });
+                                        itemsObj[key] = subObj;
+                                    } else {
+                                        itemsObj[key] = val;
+                                    }
+                                }
+                            });
+                        }
+                    }
+                }
+                updatedItem.items = itemsObj;
             }
             for (let i = 1; i <= 4; i++) {
                 const val = document.getElementById(`edit_val_${i}`).value;
@@ -1401,6 +1494,9 @@
                 updatedItem.items[`item${i}`].value = val;
                 updatedItem.items[`item${i}`].type = updatedItem.checkerType;
             }
+            // 기존 서명 정보 다시 주입하여 유실 방지
+            if (existingManagerSig) updatedItem.items.managerSignature = existingManagerSig;
+            if (existingLeaderSig) updatedItem.items.leaderSignature = existingLeaderSig;
 
             // 1. 로컬 스토리지 업데이트 (동기화 용)
             const localData = JSON.parse(localStorage.getItem('security_check_data') || '[]');
@@ -1610,8 +1706,8 @@
                     grouped[dateKey] = {
                         '최종퇴청자': null,
                         '당직근무자': null,
-                        managerSignature: item.managerSignature || '',
-                        leaderSignature: item.leaderSignature || ''
+                        managerSignature: extractSignature(item, 'manager'),
+                        leaderSignature: extractSignature(item, 'leader')
                     };
                     
                     // 타입 판별 (root의 checkerType 우선, 없으면 items 내부 확인)
@@ -1625,11 +1721,13 @@
                 } else {
                     // 이미 해당 날짜의 최신 대표 기록이 선정되었으므로 이후 데이터는 무시.
                     // 단, 결재 서명 정보가 있다면 유실 방지를 위해 병합.
-                    if (!grouped[dateKey].managerSignature && item.managerSignature) {
-                        grouped[dateKey].managerSignature = item.managerSignature;
+                    const mSig = extractSignature(item, 'manager');
+                    const lSig = extractSignature(item, 'leader');
+                    if (!grouped[dateKey].managerSignature && mSig) {
+                        grouped[dateKey].managerSignature = mSig;
                     }
-                    if (!grouped[dateKey].leaderSignature && item.leaderSignature) {
-                        grouped[dateKey].leaderSignature = item.leaderSignature;
+                    if (!grouped[dateKey].leaderSignature && lSig) {
+                        grouped[dateKey].leaderSignature = lSig;
                     }
                 }
             });
