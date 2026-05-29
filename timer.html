@@ -378,7 +378,6 @@
         (function () {
             const LIMIT_SECONDS = 60; // 1분 (60초) 제한 시간 설정
             const STORAGE_KEY = "github_page_session_visit_time";
-            const STORAGE_QR_KEY = "github_page_session_qr_token";
             const REDIRECT_URL = ""; // 만료 후 별도 리다이렉트 원할 시 URL 입력 가능
 
             // 원형 프로그레스 바 제어 설정 (안전한 속성 바인딩)
@@ -395,31 +394,30 @@
                 circle.style.strokeDashoffset = offset;
             }
 
-            // URL의 qr 파라미터 획득 (QR 코드로 새 접속을 판단하기 위함)
+            // URL의 from 파라미터 검사
             const urlParams = new URLSearchParams(window.location.search);
-            const currentQrToken = urlParams.get('qr');
+            const isFromQr = urlParams.get('from') === 'qr';
 
-            // 기존에 저장된 QR 토큰 및 최초 접속 시각 획득
-            const storedQrToken = localStorage.getItem(STORAGE_QR_KEY);
             let firstVisit = localStorage.getItem(STORAGE_KEY);
 
-            // 조건: 새로운 QR코드를 찍고 접속한 경우 (URL의 qr 파라미터가 기존 저장된 것과 다른 경우)
-            if (currentQrToken && currentQrToken !== storedQrToken) {
+            if (isFromQr) {
+                // QR 코드로 새롭게 접속한 경우 -> 세션을 1분으로 초기화
                 firstVisit = Date.now().toString();
                 localStorage.setItem(STORAGE_KEY, firstVisit);
-                localStorage.setItem(STORAGE_QR_KEY, currentQrToken);
-            } else {
-                // 기존 접속 유지 (새로고침 등)
-                if (!firstVisit) {
-                    firstVisit = Date.now().toString();
-                    localStorage.setItem(STORAGE_KEY, firstVisit);
-                } else {
-                    firstVisit = parseInt(firstVisit, 10);
+
+                // 접속 성공 즉시 주소창에서 ?from=qr 파라미터를 숨겨서 새로고침(F5) 우회 시도 차단
+                if (window.history.replaceState) {
+                    const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+                    window.history.replaceState({ path: cleanUrl }, '', cleanUrl);
                 }
-                
-                // 만약 URL에는 qr 토큰이 있는데 로컬 스토리지에만 누락된 상태라면 기록
-                if (currentQrToken && !storedQrToken) {
-                    localStorage.setItem(STORAGE_QR_KEY, currentQrToken);
+            } else {
+                // 직접 주소 입력, 주소 공유, 또는 새로고침 접속인 경우
+                if (firstVisit) {
+                    // 기존 유효 세션 잔여 시간 확인용 파싱
+                    firstVisit = parseInt(firstVisit, 10);
+                } else {
+                    // 유효한 QR 접속 정보가 없으므로 즉시 만료 차단 처리
+                    firstVisit = 0;
                 }
             }
 
