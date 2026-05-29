@@ -959,7 +959,7 @@
             // 1. 서버 데이터 캐시를 역순으로 복사 (시트 하단에 추가된 수정본에 우선권을 주기 위함)
             const reversed = [...cachedData].reverse();
             // 2. ID(타입스탬프) 기준 내림차순 정렬
-            return reversed.sort((a, b) => {
+            const sorted = reversed.sort((a, b) => {
                 const idDiff = Number(b.id) - Number(a.id);
                 if (idDiff !== 0) return idDiff;
                 // 3. ID가 같은 경우(중복/수정본), modifiedAt 필드가 있는 최신 데이터를 우선함
@@ -967,6 +967,18 @@
                 const bMod = b.modifiedAt || 0;
                 return bMod - aMod;
             });
+
+            // 4. 동일 ID 데이터 중 최신 1건만 필터링 (중복 제거)
+            const uniqueData = [];
+            const seenIds = new Set();
+            for (const item of sorted) {
+                const itemIdStr = String(item.id);
+                if (!seenIds.has(itemIdStr)) {
+                    seenIds.add(itemIdStr);
+                    uniqueData.push(item);
+                }
+            }
+            return uniqueData;
         }
 
         // 날짜+층 기준 요약(최신 1건 + 점검/결재 존재 여부)
