@@ -946,20 +946,20 @@
             return String(s).substring(0, 10);
         };
 
-        // 결재 서명 추출 헬퍼 함수 (서버 미반환 필드 대응을 위해 items 객체 내 매핑 지원)
+        // 결재 서명 추출 헬퍼 함수 (서버 미반환 필드 대응을 위해 signature 필드 내 결합 지원)
         const extractSignature = (item, type) => {
             if (!item) return "";
             const key = (type === "manager") ? "managerSignature" : "leaderSignature";
             
-            // 1. 루트 필드에 서명이 있는 경우 우선 채택
+            // 1. 루트 필드에 서명이 있는 경우 우선 채택 (즉시 반영 목적)
             if (item[key]) return item[key];
             
-            // 2. items 필드가 문자열이고 내부에 서명이 있는 경우 정규표현식 파싱
-            const itemsStr = String(item.items || "");
-            if (itemsStr) {
-                const regex = new RegExp(key + "\\s*=\\s*([^,}]+)");
-                const match = itemsStr.match(regex);
-                if (match) return match[1];
+            // 2. signature 필드 내에 결합된 서명 정보가 있을 경우 파싱
+            const sigStr = String(item.signature || "");
+            if (sigStr.includes("|||")) {
+                const parts = sigStr.split("|||");
+                if (type === "manager") return parts[1] || "";
+                if (type === "leader") return parts[2] || "";
             }
             return "";
         };
@@ -1091,7 +1091,7 @@
                         <td style="font-weight:bold; color:var(--nhis-blue);">${floor}</td>
                         <td>${item.position}급</td>
                         <td>${item.userName}</td>
-                        <td><img src="${item.signature}" class="sig-thumbnail"></td>
+                        <td><img src="${String(item.signature || '').split('|||')[0]}" class="sig-thumbnail"></td>
                     `;
                 } else {
                     tr.style.backgroundColor = '#f9f9f9';
@@ -1270,48 +1270,22 @@
                 updatedItem = { ...data[idx] };
             }
 
-            if (type === 'manager') updatedItem.managerSignature = dataUrl;
-            if (type === 'leader') updatedItem.leaderSignature = dataUrl;
+            const existingUserSig = String(currentItem.signature || "").split("|||")[0];
+            const existingManagerSig = extractSignature(currentItem, "manager");
+            const existingLeaderSig = extractSignature(currentItem, "leader");
+
+            let newManagerSig = existingManagerSig;
+            let newLeaderSig = existingLeaderSig;
+
+            if (type === 'manager') newManagerSig = dataUrl;
+            if (type === 'leader') newLeaderSig = dataUrl;
+
+            // signature 필드에 결합하여 구글 서버에 영구 보존
+            updatedItem.signature = existingUserSig + "|||" + newManagerSig + "|||" + newLeaderSig;
             
-            // [서버 미반환 필드 우회] items 객체 내부에 서명 정보 주입
-            let itemsObj = {};
-            if (updatedItem.items) {
-                if (typeof updatedItem.items === 'object') {
-                    itemsObj = { ...updatedItem.items };
-                } else if (typeof updatedItem.items === 'string') {
-                    const trimmed = updatedItem.items.trim();
-                    if (trimmed.startsWith('{')) {
-                        try {
-                            itemsObj = JSON.parse(trimmed);
-                        } catch (e) {
-                            const pairs = trimmed.substring(1, trimmed.length - 1).split(/,\s*/);
-                            pairs.forEach(pair => {
-                                const splitIdx = pair.indexOf('=');
-                                if (splitIdx !== -1) {
-                                    const key = pair.substring(0, splitIdx).trim();
-                                    let val = pair.substring(splitIdx + 1).trim();
-                                    if (val.startsWith('{') && val.endsWith('}')) {
-                                        const subPairs = val.substring(1, val.length - 1).split(/,\s*/);
-                                        const subObj = {};
-                                        subPairs.forEach(subPair => {
-                                            const subSplitIdx = subPair.indexOf('=');
-                                            if (subSplitIdx !== -1) {
-                                                subObj[subPair.substring(0, subSplitIdx).trim()] = subPair.substring(subSplitIdx + 1).trim();
-                                            }
-                                        });
-                                        itemsObj[key] = subObj;
-                                    } else {
-                                        itemsObj[key] = val;
-                                    }
-                                }
-                            });
-                        }
-                    }
-                }
-            }
-            if (type === 'manager') itemsObj.managerSignature = dataUrl;
-            if (type === 'leader') itemsObj.leaderSignature = dataUrl;
-            updatedItem.items = itemsObj;
+            // 로컬 메모리 즉시 반영용 속성
+            updatedItem.managerSignature = newManagerSig;
+            updatedItem.leaderSignature = newLeaderSig;
             
             updatedItem.modifiedAt = Date.now(); // 수정 일시 업데이트
             updatedItem.lastModified = updatedItem.modifiedAt;
@@ -1445,48 +1419,24 @@
             updatedItem.checkerType = document.getElementById('edit_checkerType').value;
             updatedItem.position = document.getElementById('edit_position').value;
             updatedItem.userName = document.getElementById('edit_userName').value;
-            updatedItem.signature = currentEditingSig;
-            // [강화] 수정 시각 기록 (동일 ID 중 최우선 채택을 위함)
-            updatedItem.modifiedAt = Date.now();
-
-            // 기존 items에 들어있던 서명 정보 추출하여 유실 방지
+            // 기존의 결합된 서명 정보 유지 추출
+            const existingUserSig = String(currentEditingSig || "").split("|||")[0];
             const existingManagerSig = extractSignature(item, 'manager');
             const existingLeaderSig = extractSignature(item, 'leader');
 
+            // signature 필드 결합 기입 (유실 방지)
+            updatedItem.signature = existingUserSig + "|||" + existingManagerSig + "|||" + existingLeaderSig;
+            
+            // 로컬 메모리 반영용
+            updatedItem.managerSignature = existingManagerSig;
+            updatedItem.leaderSignature = existingLeaderSig;
+
+            // [강화] 수정 시각 기록 (동일 ID 중 최우선 채택을 위함)
+            updatedItem.modifiedAt = Date.now();
+
             // 점검 항목 업데이트
             if (!updatedItem.items || typeof updatedItem.items !== 'object') {
-                let itemsObj = {};
-                if (typeof updatedItem.items === 'string') {
-                    const trimmed = updatedItem.items.trim();
-                    if (trimmed.startsWith('{')) {
-                        try {
-                            itemsObj = JSON.parse(trimmed);
-                        } catch (e) {
-                            const pairs = trimmed.substring(1, trimmed.length - 1).split(/,\s*/);
-                            pairs.forEach(pair => {
-                                const splitIdx = pair.indexOf('=');
-                                if (splitIdx !== -1) {
-                                    const key = pair.substring(0, splitIdx).trim();
-                                    let val = pair.substring(splitIdx + 1).trim();
-                                    if (val.startsWith('{') && val.endsWith('}')) {
-                                        const subPairs = val.substring(1, val.length - 1).split(/,\s*/);
-                                        const subObj = {};
-                                        subPairs.forEach(subPair => {
-                                            const subSplitIdx = subPair.indexOf('=');
-                                            if (subSplitIdx !== -1) {
-                                                subObj[subPair.substring(0, subSplitIdx).trim()] = subPair.substring(subSplitIdx + 1).trim();
-                                            }
-                                        });
-                                        itemsObj[key] = subObj;
-                                    } else {
-                                        itemsObj[key] = val;
-                                    }
-                                }
-                            });
-                        }
-                    }
-                }
-                updatedItem.items = itemsObj;
+                updatedItem.items = {};
             }
             for (let i = 1; i <= 4; i++) {
                 const val = document.getElementById(`edit_val_${i}`).value;
@@ -1494,9 +1444,6 @@
                 updatedItem.items[`item${i}`].value = val;
                 updatedItem.items[`item${i}`].type = updatedItem.checkerType;
             }
-            // 기존 서명 정보 다시 주입하여 유실 방지
-            if (existingManagerSig) updatedItem.items.managerSignature = existingManagerSig;
-            if (existingLeaderSig) updatedItem.items.leaderSignature = existingLeaderSig;
 
             // 1. 로컬 스토리지 업데이트 (동기화 용)
             const localData = JSON.parse(localStorage.getItem('security_check_data') || '[]');
@@ -1919,7 +1866,7 @@
                             return timeMatch ? timeMatch[0] : '';
                         }
                         if (infoKey === 'sig' && submission.signature) {
-                            return `<img src="${submission.signature}" style="max-height:28px;">`;
+                            return `<img src="${String(submission.signature).split('|||')[0]}" style="max-height:28px;">`;
                         }
                         return submission[infoKey] || '';
                     };
