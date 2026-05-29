@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>제한 시간 접속 관리 - 타이머</title>
+    <!-- 모던한 구글 폰트 링크 (Outfit & Rajdhani) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Rajdhani:wght@600;700&display=swap"
+        rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-color: #0b0c10;
+            --card-bg: rgba(255, 255, 255, 0.03);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --neon-blue: #00f2fe;
+            --neon-purple: #4facfe;
+            --neon-red: #ff0844;
+            --text-primary: #ffffff;
+            --text-secondary: #a0aec0;
+            --glass-blur: blur(12px);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: radial-gradient(circle at 50% 50%, #1a1c24 0%, var(--bg-color) 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* 배경 데코레이션 네온 광원 효과 */
+        .glow-sphere {
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(0, 242, 254, 0.15) 0%, rgba(0, 0, 0, 0) 70%);
+            filter: blur(50px);
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .glow-sphere-1 {
+            top: 10%;
+            left: 10%;
+        }
+
+        .glow-sphere-2 {
+            bottom: 10%;
+            right: 10%;
+        }
+
+        /* 실시간 플로팅 타이머 (우측 상단 고정) */
+        .floating-timer {
+            position: fixed;
+            top: 25px;
+            right: 25px;
+            background: rgba(11, 12, 16, 0.6);
+            backdrop-filter: var(--glass-blur);
+            border: 1px solid var(--card-border);
+            padding: 10px 20px;
+            border-radius: 50px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 100;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            animation: pulse-border 2s infinite alternate;
+        }
+
+        .floating-timer .pulse-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--neon-blue);
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--neon-blue);
+            animation: blink 1s infinite alternate;
+        }
+
+        .floating-timer span {
+            font-family: 'Rajdhani', sans-serif;
+            font-weight: 700;
+            font-size: 1.2rem;
+            color: var(--neon-blue);
+            letter-spacing: 1px;
+        }
+
+        /* 메인 콘텐츠 카드 */
+        .main-card {
+            width: 90%;
+            max-width: 500px;
+            background: var(--card-bg);
+            backdrop-filter: var(--glass-blur);
+            border: 1px solid var(--card-border);
+            border-radius: 24px;
+            padding: 40px;
+            text-align: center;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+            z-index: 10;
+            position: relative;
+            transition: transform 0.3s ease;
+        }
+
+        .main-card:hover {
+            transform: translateY(-5px);
+        }
+
+        /* 링 서브 타이머 */
+        .progress-ring-container {
+            position: relative;
+            width: 150px;
+            height: 150px;
+            margin: 0 auto 30px;
+        }
+
+        .progress-ring-circle {
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+
+        .progress-ring-back {
+            stroke: rgba(255, 255, 255, 0.05);
+        }
+
+        .progress-ring-bar {
+            stroke: url(#neonGradient);
+            stroke-linecap: round;
+            transition: stroke-dashoffset 0.1s linear;
+        }
+
+        .timer-text-inner {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: 'Rajdhani', sans-serif;
+            font-weight: 700;
+            font-size: 2.2rem;
+            color: #fff;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+        }
+
+        /* 제목 및 설명 */
+        h1 {
+            font-size: 1.8rem;
+            font-weight: 800;
+            margin-bottom: 12px;
+            background: linear-gradient(135deg, #fff 0%, #a5b4fc 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        p.desc {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+
+        /* 프리미엄 데모 본문 영역 */
+        .demo-body {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px dashed rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: left;
+            margin-bottom: 20px;
+        }
+
+        .demo-body .field {
+            margin-bottom: 12px;
+            font-size: 0.85rem;
+        }
+
+        .demo-body .field strong {
+            color: var(--neon-blue);
+        }
+
+        .badge-verified {
+            display: inline-block;
+            background: rgba(0, 242, 254, 0.1);
+            color: var(--neon-blue);
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+
+        /* 만료 화면 (초기 숨김) */
+        .expired-container {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+
+        .expired-card {
+            width: 90%;
+            max-width: 450px;
+            background: rgba(255, 8, 68, 0.03);
+            backdrop-filter: var(--glass-blur);
+            border: 1px solid rgba(255, 8, 68, 0.25);
+            border-radius: 24px;
+            padding: 50px 40px;
+            text-align: center;
+            box-shadow: 0 0 40px rgba(255, 8, 68, 0.15);
+            animation: shake 0.5s ease-in-out;
+        }
+
+        .expired-icon {
+            width: 80px;
+            height: 80px;
+            background: rgba(255, 8, 68, 0.1);
+            border: 2px solid var(--neon-red);
+            color: var(--neon-red);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin: 0 auto 25px;
+            box-shadow: 0 0 20px rgba(255, 8, 68, 0.4);
+            animation: blink-red 1.5s infinite alternate;
+        }
+
+        .expired-card h2 {
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: var(--neon-red);
+            margin-bottom: 15px;
+            text-shadow: 0 0 10px rgba(255, 8, 68, 0.2);
+        }
+
+        .expired-card p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            line-height: 1.6;
+            margin-bottom: 25px;
+        }
+
+        /* 애니메이션 키프레임 */
+        @keyframes blink {
+            from {
+                opacity: 0.3;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes blink-red {
+            from {
+                box-shadow: 0 0 10px rgba(255, 8, 68, 0.3);
+            }
+
+            to {
+                box-shadow: 0 0 25px rgba(255, 8, 68, 0.7);
+            }
+        }
+
+        @keyframes pulse-border {
+            from {
+                border-color: rgba(255, 255, 255, 0.08);
+            }
+
+            to {
+                border-color: rgba(0, 242, 254, 0.4);
+            }
+        }
+
+        @keyframes shake {
+
+            0%,
+            100% {
+                transform: translateX(0);
+            }
+
+            20%,
+            60% {
+                transform: translateX(-8px);
+            }
+
+            40%,
+            80% {
+                transform: translateX(8px);
+            }
+        }
+
+        /* 미디어 쿼리 */
+        @media (max-width: 600px) {
+            .floating-timer {
+                top: 15px;
+                right: 15px;
+                padding: 8px 15px;
+            }
+
+            .floating-timer span {
+                font-size: 1rem;
+            }
+
+            .main-card {
+                padding: 30px 20px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="glow-sphere glow-sphere-1"></div>
+    <div class="glow-sphere glow-sphere-2"></div>
+
+    <!-- 우측 상단 플로팅 타이머 위젯 -->
+    <div class="floating-timer" id="floatingTimer">
+        <div class="pulse-dot"></div>
+        <span id="floatingTimerText">01:00</span>
+    </div>
+
+    <!-- 메인 유효 웹화면 -->
+    <div class="main-card" id="mainContainer">
+        <!-- 프로그레스 링 -->
+        <div class="progress-ring-container">
+            <svg width="150" height="150">
+                <defs>
+                    <linearGradient id="neonGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#00f2fe" />
+                        <stop offset="100%" stop-color="#4facfe" />
+                    </linearGradient>
+                </defs>
+                <circle class="progress-ring-circle progress-ring-back" stroke-width="8" fill="transparent" r="66"
+                    cx="75" cy="75" />
+                <circle class="progress-ring-circle progress-ring-bar" id="progressBar" stroke-width="8"
+                    fill="transparent" r="66" cx="75" cy="75" stroke-dasharray="414.69" stroke-dashoffset="0" />
+            </svg>
+            <div class="timer-text-inner" id="innerTimerText">01:00</div>
+        </div>
+
+        <div class="badge-verified">✓ 보안 일회성 페이지 인증됨</div>
+        <h1>보안 자료 및 점검 양식</h1>
+        <p class="desc">본 문서는 기밀 유지 및 비인가 접근 방지를 위해 최초 접속 후 60초가 지나면 열람 권한이 자동 해제되며 재접속이 전면 차단됩니다.</p>
+
+        <!-- 예시 본문 데이터 -->
+        <div class="demo-body">
+            <div class="field">🕒 상태: <strong>실시간 세션 활성화</strong></div>
+            <div class="field">📑 자료명: <strong>인천경기지역본부 가이드</strong></div>
+            <div class="field">🔒 보안 등급: <strong>대외비 (1급)</strong></div>
+            <div class="field">⚠️ 주의: <strong>화면 캡쳐 및 무단 유출 금지</strong></div>
+        </div>
+    </div>
+
+    <!-- 접속 만료 화면 (기본 숨김) -->
+    <div class="expired-container" id="expiredContainer">
+        <div class="expired-card">
+            <div class="expired-icon">!</div>
+            <h2>접속 시간이 만료되었습니다</h2>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            const LIMIT_SECONDS = 60; // 1분 (60초) 제한 시간 설정
+            const STORAGE_KEY = "github_page_session_visit_time";
+            const STORAGE_QR_KEY = "github_page_session_qr_token";
+            const REDIRECT_URL = ""; // 만료 후 별도 리다이렉트 원할 시 URL 입력 가능
+
+            // 원형 프로그레스 바 제어 설정 (안전한 속성 바인딩)
+            const circle = document.getElementById('progressBar');
+            const radius = 66; // SVG r="66" 기반 고정값 설정하여 브라우저 파싱 에러 사전 방지
+            const circumference = radius * 2 * Math.PI; // 약 414.69
+            if (circle) {
+                circle.style.strokeDasharray = `${circumference} ${circumference}`;
+            }
+
+            function setProgress(percent) {
+                if (!circle) return;
+                const offset = circumference - (percent / 100 * circumference);
+                circle.style.strokeDashoffset = offset;
+            }
+
+            // URL의 qr 파라미터 획득 (QR 코드로 새 접속을 판단하기 위함)
+            const urlParams = new URLSearchParams(window.location.search);
+            const currentQrToken = urlParams.get('qr');
+
+            // 기존에 저장된 QR 토큰 및 최초 접속 시각 획득
+            const storedQrToken = localStorage.getItem(STORAGE_QR_KEY);
+            let firstVisit = localStorage.getItem(STORAGE_KEY);
+
+            // 조건: 새로운 QR코드를 찍고 접속한 경우 (URL의 qr 파라미터가 기존 저장된 것과 다른 경우)
+            if (currentQrToken && currentQrToken !== storedQrToken) {
+                firstVisit = Date.now().toString();
+                localStorage.setItem(STORAGE_KEY, firstVisit);
+                localStorage.setItem(STORAGE_QR_KEY, currentQrToken);
+            } else {
+                // 기존 접속 유지 (새로고침 등)
+                if (!firstVisit) {
+                    firstVisit = Date.now().toString();
+                    localStorage.setItem(STORAGE_KEY, firstVisit);
+                } else {
+                    firstVisit = parseInt(firstVisit, 10);
+                }
+                
+                // 만약 URL에는 qr 토큰이 있는데 로컬 스토리지에만 누락된 상태라면 기록
+                if (currentQrToken && !storedQrToken) {
+                    localStorage.setItem(STORAGE_QR_KEY, currentQrToken);
+                }
+            }
+
+            // 타이머 업데이트 메인 함수
+            function updateTimer() {
+                const now = Date.now();
+                const elapsedSeconds = Math.floor((now - firstVisit) / 1000);
+                const remainingSeconds = LIMIT_SECONDS - elapsedSeconds;
+
+                if (remainingSeconds <= 0) {
+                    clearInterval(timerInterval);
+                    handleExpiration();
+                } else {
+                    // 남은 시간 계산 분:초
+                    const m = String(Math.floor(remainingSeconds / 60)).padStart(2, '0');
+                    const s = String(remainingSeconds % 60).padStart(2, '0');
+                    const timeString = `${m}:${s}`;
+
+                    // UI 텍스트 갱신
+                    document.getElementById('floatingTimerText').innerText = timeString;
+                    document.getElementById('innerTimerText').innerText = timeString;
+
+                    // 프로그레스 바 퍼센트 갱신
+                    const percent = (remainingSeconds / LIMIT_SECONDS) * 100;
+                    setProgress(percent);
+                }
+            }
+
+            // 만료 처리 함수
+            function handleExpiration() {
+                // 1. 프로그레스 바 및 텍스트 00:00 고정
+                document.getElementById('floatingTimerText').innerText = "00:00";
+                document.getElementById('innerTimerText').innerText = "00:00";
+                setProgress(0);
+
+                // 2. 타이머 위젯 및 본문 컨테이너 숨김
+                document.getElementById('floatingTimer').style.display = 'none';
+                document.getElementById('mainContainer').style.display = 'none';
+
+                // 3. 만료 안내 전용 화면 렌더링
+                document.getElementById('expiredContainer').style.display = 'flex';
+
+                // 4. 경고 모달 알림
+                alert("유효 시간이 초과되었습니다. 페이지 접근 권한이 만료되었습니다.");
+
+                // 5. 옵션: 외부 리다이렉트가 지정되어 있을 시 이동
+                if (REDIRECT_URL) {
+                    window.location.replace(REDIRECT_URL);
+                }
+            }
+
+            // 즉시 1회 실행 후 1초 주기로 갱신
+            updateTimer();
+            const timerInterval = setInterval(updateTimer, 1000);
+        })();
+    </script>
+</body>
+
+</html>
