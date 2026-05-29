@@ -1284,6 +1284,7 @@
                     }
                 } catch (err) { console.error('Approval sync error:', err); }
             }
+            document.getElementById('modal').style.display = 'none';
             alert('서명이 저장되었습니다.');
             renderRecords(false);
         }
