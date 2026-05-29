@@ -946,7 +946,7 @@
             return String(s).substring(0, 10);
         };
 
-        // 데이터 로드 헬퍼 함수 (로컬 데이터 제외, 서버 데이터만 사용)
+        // 데이터 로드 헬퍼 함수 (로컬 데이터 제외, 구글 서버 데이터만 사용)
         function getMergedData() {
             // 1. 서버 데이터 캐시를 역순으로 복사 (시트 하단에 추가된 수정본에 우선권을 주기 위함)
             const reversed = [...cachedData].reverse();
@@ -954,9 +954,9 @@
             const sorted = reversed.sort((a, b) => {
                 const idDiff = Number(b.id) - Number(a.id);
                 if (idDiff !== 0) return idDiff;
-                // 3. ID가 같은 경우(중복/수정본), modifiedAt 필드가 있는 최신 데이터를 우선함
-                const aMod = a.modifiedAt || 0;
-                const bMod = b.modifiedAt || 0;
+                // 3. ID가 같은 경우(중복/수정본), modifiedAt 또는 lastModified 필드가 있는 최신 데이터를 우선함
+                const aMod = a.modifiedAt || a.lastModified || 0;
+                const bMod = b.modifiedAt || b.lastModified || 0;
                 return bMod - aMod;
             });
 
@@ -1255,7 +1255,8 @@
             if (type === 'manager') updatedItem.managerSignature = dataUrl;
             if (type === 'leader') updatedItem.leaderSignature = dataUrl;
             
-            updatedItem.lastModified = Date.now(); // 수정 일시 업데이트
+            updatedItem.modifiedAt = Date.now(); // 수정 일시 업데이트
+            updatedItem.lastModified = updatedItem.modifiedAt;
 
             // 로컬 스토리지 업데이트
             data[idx] = updatedItem;
@@ -1278,13 +1279,13 @@
                     
                     // 캐시 업데이트 (관리자 페이지 내부 즉시 반영용)
                     if (typeof cachedData !== 'undefined') {
-                        const cIdx = cachedData.findIndex(i => i.id === currentItem.id);
+                        const cIdx = cachedData.findIndex(i => String(i.id) === String(currentItem.id));
                         if (cIdx !== -1) cachedData[cIdx] = updatedItem;
                     }
                 } catch (err) { console.error('Approval sync error:', err); }
             }
             alert('서명이 저장되었습니다.');
-            location.reload();
+            renderRecords(false);
         }
 
         function openEdit(id) {
@@ -1438,7 +1439,7 @@
 
             document.getElementById('modal').style.display = 'none';
             alert('수정 사항이 저장되었습니다.');
-            location.reload();
+            renderRecords(false);
         }
 
         async function del(id) {
@@ -1461,7 +1462,7 @@
                         body: JSON.stringify({ action: 'delete', id: id })
                     });
                     // 캐시 업데이트
-                    cachedData = cachedData.filter(i => i.id !== id);
+                    cachedData = cachedData.filter(i => String(i.id) !== String(id));
                 } catch (err) {
                     console.error('Delete error:', err);
                     alert('구글 드라이브 삭제 요청 중 오류가 발생했습니다.');
@@ -1469,7 +1470,7 @@
             }
 
             alert('삭제되었습니다.');
-            location.reload();
+            renderRecords(false);
         }
 
         function exportOfficialPDF() {
