@@ -188,35 +188,27 @@
             background-color: #fff9f9 !important;
         }
 
-        #recordList tr.row-missing-approval-partial td {
+        #recordList tr.row-manager-approved td {
             background: #fff3cd;
         }
 
-        #recordList tr.row-missing-manager-only td {
-            background: #fff3cd;
+        #recordList tr.row-manager-approved:hover td {
+            background: #ffe8a1 !important;
         }
 
-        #recordList tr.row-missing-leader-only td {
+        #recordList tr.row-leader-approved td {
             background: #eaf2ff;
         }
 
-        #recordList tr.row-missing-approval-both td {
-            background: #fdeaea;
-        }
-
-        #recordList tr.row-missing-approval-partial:hover td {
-            background: #ffe8a1 !important;
-        }
-
-        #recordList tr.row-missing-manager-only:hover td {
-            background: #ffe8a1 !important;
-        }
-
-        #recordList tr.row-missing-leader-only:hover td {
+        #recordList tr.row-leader-approved:hover td {
             background: #d7e8ff !important;
         }
 
-        #recordList tr.row-missing-approval-both:hover td {
+        #recordList tr.row-no-approval td {
+            background: #fdeaea;
+        }
+
+        #recordList tr.row-no-approval:hover td {
             background: #f8d4d4 !important;
         }
 
@@ -1046,20 +1038,20 @@
                 if (item) {
                     tr.onclick = () => showRecordActions(item);
 
-                    const hasSubmitter = !!floorSummary.hasSubmitter;
-                    const missingManager = hasSubmitter && !floorSummary.hasManagerApproval;
-                    const missingLeader = hasSubmitter && !floorSummary.hasLeaderApproval;
-
                     if (floorSummary.hasSubmitter) checkerCount += 1;
                     if (floorSummary.hasManagerApproval) managerApprovalCount += 1;
                     if (floorSummary.hasLeaderApproval) leaderApprovalCount += 1;
 
-                    if (missingManager && missingLeader) {
-                        tr.classList.add('row-missing-approval-both');
-                    } else if (missingManager) {
-                        tr.classList.add('row-missing-manager-only');
-                    } else if (missingLeader) {
-                        tr.classList.add('row-missing-leader-only');
+                    // 서명 완료 상태에 따른 행 색상 지정
+                    if (floorSummary.hasManagerApproval && floorSummary.hasLeaderApproval) {
+                        // 담당 및 팀장 서명 모두 완료 -> 파란색
+                        tr.classList.add('row-leader-approved');
+                    } else if (floorSummary.hasManagerApproval) {
+                        // 담당 서명만 완료 -> 노란색
+                        tr.classList.add('row-manager-approved');
+                    } else {
+                        // 둘 다 누락 (미결재) -> 연한 빨간색
+                        tr.classList.add('row-no-approval');
                     }
 
                     // 제출일시 표시 (Number 변환으로 안정성 확보)
