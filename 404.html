@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>NHIS 보안점검표 - 페이지 이동 중</title>
+    <script>
+        // /home과 같이 가상의 경로 상태에서 새로고침이 발생했을 때
+        // 세션 정보(sessionStorage)를 보존한 채 최상위 index.html로 안전하게 되돌려 보냅니다.
+        const path = window.location.pathname;
+        if (path.includes('/home')) {
+            // repository 명칭인 /NHIS_Security-Checklist/ 를 포함한 경로로 리다이렉트 처리합니다.
+            const repoName = '/NHIS_Security-Checklist/';
+            window.location.replace(window.location.protocol + '//' + window.location.host + repoName);
+        } else {
+            // 다른 잘못된 주소로 들어온 경우에도 안전하게 메인 페이지로 이동시킵니다.
+            const repoName = '/NHIS_Security-Checklist/';
+            window.location.replace(window.location.protocol + '//' + window.location.host + repoName);
+        }
+    </script>
+</head>
+<body>
+    <div style="
+        display: flex; 
+        justify-content: center; 
+        align-items: center; 
+        height: 100vh; 
+        font-family: 'Noto Sans KR', sans-serif; 
+        color: #666;
+    ">
+        페이지를 불러오는 중입니다. 잠시만 기다려 주세요...
+    </div>
+</body>
+</html>
