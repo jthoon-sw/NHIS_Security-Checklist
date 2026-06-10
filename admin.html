@@ -1256,7 +1256,13 @@
         }
 
         async function saveApprovalSignature(type, dataUrl) {
-            let data = JSON.parse(localStorage.getItem('security_check_data') || '[]');
+            let data = [];
+            try {
+                data = JSON.parse(localStorage.getItem('security_check_data') || '[]');
+            } catch (e) {
+                console.warn('로컬 스토리지 파싱 실패:', e);
+            }
+
             // ID 비교 시 문자열로 변환하여 안전하게 비교
             let idx = data.findIndex(i => String(i.id) === String(currentItem.id));
             
@@ -1290,19 +1296,26 @@
             updatedItem.modifiedAt = Date.now(); // 수정 일시 업데이트
             updatedItem.lastModified = updatedItem.modifiedAt;
 
-            // 로컬 스토리지 업데이트
-            data[idx] = updatedItem;
-            localStorage.setItem('security_check_data', JSON.stringify(data));
+            // 로컬 스토리지 업데이트 (용량 초과 에러 방지를 위한 try-catch 처리)
+            try {
+                data[idx] = updatedItem;
+                localStorage.setItem('security_check_data', JSON.stringify(data));
+            } catch (e) {
+                console.warn('로컬 스토리지 업데이트 실패 (용량 초과 등의 이유로 무시됨):', e);
+            }
 
             // 구글 드라이브(GAS) 업데이트
             if (GAS_URL && !GAS_URL.includes('YOUR_GAS_WEB_APP_URL_HERE')) {
+                // 서명 저장 중임을 표시
+                const originalModalBody = document.querySelector('#modal .modal-body').innerHTML;
                 try {
+                    // await를 통해 구글 드라이브에 안전하게 전송이 끝날 때까지 기다립니다.
                     const submission = {
                         ...updatedItem,
                         action: 'overwrite',
                         oldId: currentItem.id
                     };
-                    fetch(GAS_URL, {
+                    await fetch(GAS_URL, {
                         method: 'POST',
                         mode: 'no-cors',
                         headers: { 'Content-Type': 'text/plain' },
@@ -1313,11 +1326,14 @@
                     if (typeof cachedData !== 'undefined') {
                         const cIdx = cachedData.findIndex(i => String(i.id) === String(currentItem.id));
                         if (cIdx !== -1) cachedData[cIdx] = updatedItem;
+                        else cachedData.push(updatedItem);
                     }
-                } catch (err) { console.error('Approval sync error:', err); }
+                } catch (err) {
+                    console.error('Approval sync error:', err);
+                }
             }
             document.getElementById('modal').style.display = 'none';
-            alert('서명이 저장되었습니다.');
+            alert('서명이 성공적으로 저장되었습니다.');
             renderRecords(false);
         }
 
@@ -1445,12 +1461,16 @@
                 updatedItem.items[`item${i}`].type = updatedItem.checkerType;
             }
 
-            // 1. 로컬 스토리지 업데이트 (동기화 용)
-            const localData = JSON.parse(localStorage.getItem('security_check_data') || '[]');
-            const lIdx = localData.findIndex(i => i.id === currentId);
-            if (lIdx !== -1) {
-                localData[lIdx] = updatedItem;
-                localStorage.setItem('security_check_data', JSON.stringify(localData));
+            // 1. 로컬 스토리지 업데이트 (동기화 용, 에러 방지를 위한 try-catch 처리)
+            try {
+                const localData = JSON.parse(localStorage.getItem('security_check_data') || '[]');
+                const lIdx = localData.findIndex(i => i.id === currentId);
+                if (lIdx !== -1) {
+                    localData[lIdx] = updatedItem;
+                    localStorage.setItem('security_check_data', JSON.stringify(localData));
+                }
+            } catch (e) {
+                console.warn('로컬 스토리지 수정 사항 저장 실패 (용량 초과 등의 이유로 무시됨):', e);
             }
 
             // 2. 관리자 페이지 캐시(cachedData) 즉시 반영
@@ -1469,7 +1489,7 @@
                         oldId: currentId
                     };
 
-                    fetch(GAS_URL, {
+                    await fetch(GAS_URL, {
                         method: 'POST',
                         mode: 'no-cors',
                         headers: { 'Content-Type': 'text/plain' },
@@ -1490,8 +1510,12 @@
             if (!confirm('저장소에서도 삭제됩니다. 정말로 삭제하시겠습니까?')) return;
 
             // 로컬 스토리지 삭제
-            const data = JSON.parse(localStorage.getItem('security_check_data') || '[]');
-            localStorage.setItem('security_check_data', JSON.stringify(data.filter(i => i.id !== id)));
+            try {
+                const data = JSON.parse(localStorage.getItem('security_check_data') || '[]');
+                localStorage.setItem('security_check_data', JSON.stringify(data.filter(i => i.id !== id)));
+            } catch (e) {
+                console.warn('로컬 스토리지 데이터 삭제 중 오류 발생 (무시됨):', e);
+            }
 
             // 구글 드라이브 삭제 전송
             if (GAS_URL && !GAS_URL.includes('YOUR_GAS_WEB_APP_URL_HERE')) {
