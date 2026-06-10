@@ -51,11 +51,6 @@
                     }
                 }
 
-                // 정상 QR 접속이 확인되면 즉시 주소창에서 파라미터(?qr=true...)를 삭제하여 URL을 깔끔하게 치환
-                if (isValid) {
-                    const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
-                    window.history.replaceState({}, document.title, cleanUrl);
-                }
             } else {
                 // 주소창에 qr=true가 없는 경우
                 if (sessionStart) {
@@ -83,6 +78,12 @@
                     showBlockedScreen(isExpired);
                 });
             } else {
+                // 접속이 허용된 경우: 주소창을 /home 으로 깔끔하게 치환
+                // (새로고침 시 404가 발생하면 404.html이 이를 최상위 index.html로 우회 리다이렉트합니다.)
+                const cleanUrl = window.location.protocol + "//" + window.location.host + 
+                                 window.location.pathname.replace(/\/$/, '') + '/home';
+                window.history.replaceState({}, document.title, cleanUrl);
+
                 // 유효한 접속일 경우 타이머 가동
                 window.addEventListener('DOMContentLoaded', () => {
                     startExpiryTimer();
