@@ -1168,6 +1168,11 @@
                 modalCanvas.width = window.innerWidth * r;
                 modalCanvas.height = (window.innerHeight - 250) * r;
                 modalCtx.scale(r, r);
+                
+                // 배경색 흰색으로 채우기 (JPEG 압축 대응)
+                modalCtx.fillStyle = "white";
+                modalCtx.fillRect(0, 0, window.innerWidth, window.innerHeight - 250);
+                
                 modalCtx.strokeStyle = '#222';
                 modalCtx.lineWidth = 3;
                 modalCtx.lineCap = 'round';
@@ -1208,7 +1213,8 @@
             modalCanvas.addEventListener('touchend', stop);
 
             btnSigClear.addEventListener('click', () => {
-                modalCtx.clearRect(0, 0, modalCanvas.width, modalCanvas.height);
+                modalCtx.fillStyle = "white";
+                modalCtx.fillRect(0, 0, window.innerWidth, window.innerHeight - 250);
                 hasSignature = false;
             });
 
@@ -1222,7 +1228,8 @@
                     alert('서명을 해주세요.');
                     return;
                 }
-                const dataUrl = modalCanvas.toDataURL();
+                // PNG 대신 JPEG 0.6 압축을 사용하여 구글 스프레드시트 단일 셀 글자 수 제한 초과 방지
+                const dataUrl = modalCanvas.toDataURL('image/jpeg', 0.6);
                 
                 if (sigMode === 'edit') {
                     currentEditingSig = dataUrl;
@@ -1241,7 +1248,8 @@
                 sigMode = 'edit';
                 sigModal.style.display = 'flex';
                 document.body.style.overflow = 'hidden';
-                modalCtx.clearRect(0, 0, modalCanvas.width, modalCanvas.height);
+                modalCtx.fillStyle = "white";
+                modalCtx.fillRect(0, 0, window.innerWidth, window.innerHeight - 250);
                 hasSignature = false;
             });
         }
@@ -1251,7 +1259,8 @@
             sigMode = type;
             sigModal.style.display = 'flex';
             document.body.style.overflow = 'hidden';
-            modalCtx.clearRect(0, 0, modalCanvas.width, modalCanvas.height);
+            modalCtx.fillStyle = "white";
+            modalCtx.fillRect(0, 0, window.innerWidth, window.innerHeight - 250);
             hasSignature = false;
         }
 
