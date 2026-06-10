@@ -50,9 +50,26 @@
                         isValid = true;
                     }
                 }
+
+                // 정상 QR 접속이 확인되면 즉시 주소창에서 파라미터(?qr=true...)를 삭제하여 URL을 깔끔하게 치환
+                if (isValid) {
+                    const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+                    window.history.replaceState({}, document.title, cleanUrl);
+                }
             } else {
-                // qr=true 파라미터가 없으면 직접 URL 입력으로 간주
-                isValid = false;
+                // 주소창에 qr=true가 없는 경우
+                if (sessionStart) {
+                    // 새로고침 등으로 파라미터는 사라졌으나, 세션스토리지의 세션이 1분 미만으로 유효하다면 허용
+                    const elapsed = Date.now() - parseInt(sessionStart, 10);
+                    if (elapsed < 60000) {
+                        isValid = true;
+                    } else {
+                        isExpired = true;
+                    }
+                } else {
+                    // 세션 정보도 없고 파라미터도 없으면 직접 접속으로 간주하여 차단
+                    isValid = false;
+                }
             }
 
             if (!isValid || isExpired) {
