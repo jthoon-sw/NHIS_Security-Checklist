@@ -1163,40 +1163,42 @@
                 submitBtn.disabled = true;
                 submitBtn.innerText = '제출 중...';
 
-                // [추가] 타임아웃 헬퍼 함수 (전송 보장을 위해 다시 활용)
-                const fetchWithTimeout = (url, options, timeout = 7000) => {
+                // [추가] 타임아웃 헬퍼 함수
+                const fetchWithTimeout = (url, options, timeout = 15000) => {
                     return Promise.race([
                         fetch(url, options),
-                        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), timeout))
+                        new Promise((_, reject) => setTimeout(() => reject(new Error('네트워크 전송 시간 초과(Timeout)')), timeout))
                     ]);
                 };
 
-                // 로컬 스토리지 백업
-                const localData = JSON.parse(localStorage.getItem('security_check_data') || '[]');
-                localData.push(submission);
-                localStorage.setItem('security_check_data', JSON.stringify(localData));
+                // 로컬 스토리지 백업 (서명 이미지 누적으로 인한 용량 초과 에러 방지)
+                try {
+                    const localData = JSON.parse(localStorage.getItem('security_check_data') || '[]');
+                    localData.push(submission);
+                    localStorage.setItem('security_check_data', JSON.stringify(localData));
+                } catch (e) {
+                    console.warn('로컬 스토리지 저장 실패 (용량 초과 등의 이유로 무시됨):', e);
+                }
 
                 // Google Apps Script로 전송 (전송 안정성 최적화 버전)
                 if (GAS_URL && !GAS_URL.includes('YOUR_GAS_WEB_APP_URL_HERE')) {
                     try {
-                        // GAS 전송 시도 (백그라운드 비동기 전송으로 차단 방지)
-                        fetch(GAS_URL, {
+                        // GAS 전송 시도 (await를 사용해 네트워크 전송이 완전히 완료될 때까지 기다림)
+                        await fetchWithTimeout(GAS_URL, {
                             method: 'POST',
                             mode: 'no-cors',
                             headers: {
                                 'Content-Type': 'text/plain',
                             },
                             body: JSON.stringify(submission)
-                        }).catch(e => console.error('전송 중단 감지(무시 가능):', e));
+                        }, 15000);
 
-                        // 전송 개시 직후 성공 메시지 표시 (지연 현상 방지)
-                        setTimeout(() => {
-                            alert(`성공적으로 제출되었습니다.\n제출일시: ${submission.submitTime}\n\n※ 점검 데이터 전송이 완료되었습니다.`);
-                            location.reload();
-                        }, 500);
+                        // 전송 완료 시 성공 메시지 표시 후 새로고침
+                        alert(`성공적으로 제출되었습니다.\n제출일시: ${submission.submitTime}\n\n※ 점검 데이터 전송이 완료되었습니다.`);
+                        location.reload();
                     } catch (err) {
                         console.error('Submission Error:', err);
-                        alert('전송 설정 중 오류가 발생했습니다. 네트워크를 확인해 주세요.');
+                        alert('전송 설정 또는 네트워크 상태 오류가 발생했습니다. 다시 시도해 주세요.\n(오류 내용: ' + err.message + ')');
                         submitBtn.disabled = false;
                         submitBtn.innerText = '점검표 다시 제출하기';
                     }
