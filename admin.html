@@ -1164,16 +1164,16 @@
 
         function initModalCanvas() {
             const resize = () => {
-                // 기기 크기에 상관없이 실제 물리 캔버스 픽셀을 600x300으로 고정해 이미지 전송 용량을 최소화합니다.
-                modalCanvas.width = 600;
-                modalCanvas.height = 300;
+                // 물리 캔버스 픽셀을 300x150으로 축소해 전송 용량을 획기적으로 줄입니다. (글자 수 제한 초과 방지)
+                modalCanvas.width = 300;
+                modalCanvas.height = 150;
                 
                 // 배경색 흰색으로 채우기 (JPEG 변환 에러 방지)
                 modalCtx.fillStyle = "white";
-                modalCtx.fillRect(0, 0, 600, 300);
+                modalCtx.fillRect(0, 0, 300, 150);
                 
                 modalCtx.strokeStyle = '#222';
-                modalCtx.lineWidth = 3.5;
+                modalCtx.lineWidth = 2.5;
                 modalCtx.lineCap = 'round';
                 modalCtx.lineJoin = 'round';
             };
@@ -1185,9 +1185,9 @@
                 const clientX = e.touches ? e.touches[0].clientX : e.clientX;
                 const clientY = e.touches ? e.touches[0].clientY : e.clientY;
                 
-                // 화면상 CSS 크기와 물리 픽셀 크기(600x300)의 비율차를 적용해 그리기 좌표 보정
-                const x = (clientX - rect.left) * (600 / rect.width);
-                const y = (clientY - rect.top) * (300 / rect.height);
+                // 화면상 CSS 크기와 물리 픽셀 크기(300x150)의 비율차를 적용해 그리기 좌표 보정
+                const x = (clientX - rect.left) * (300 / rect.width);
+                const y = (clientY - rect.top) * (150 / rect.height);
                 return { x, y };
             };
 
@@ -1218,7 +1218,7 @@
 
             btnSigClear.addEventListener('click', () => {
                 modalCtx.fillStyle = "white";
-                modalCtx.fillRect(0, 0, 600, 300);
+                modalCtx.fillRect(0, 0, 300, 150);
                 hasSignature = false;
             });
 
@@ -1253,7 +1253,7 @@
                 sigModal.style.display = 'flex';
                 document.body.style.overflow = 'hidden';
                 modalCtx.fillStyle = "white";
-                modalCtx.fillRect(0, 0, 600, 300);
+                modalCtx.fillRect(0, 0, 300, 150);
                 hasSignature = false;
             });
         }
@@ -1264,7 +1264,7 @@
             sigModal.style.display = 'flex';
             document.body.style.overflow = 'hidden';
             modalCtx.fillStyle = "white";
-            modalCtx.fillRect(0, 0, 600, 300);
+            modalCtx.fillRect(0, 0, 300, 150);
             hasSignature = false;
         }
 
