@@ -3,6 +3,157 @@
 
 <head>
     <meta charset="UTF-8">
+    <script>
+        (function() {
+            // QR 접속 및 시간 제한 관리
+            const urlParams = new URLSearchParams(window.location.search);
+            const isQrAccess = urlParams.get('qr') === 'true';
+            const tokenParam = urlParams.get('t'); // 새로고침 시 리셋 방지 및 새 QR 인식을 위한 고유 파라미터
+
+            const sessionStart = sessionStorage.getItem('qr_session_start');
+            const sessionToken = sessionStorage.getItem('qr_session_token');
+
+            let isValid = false;
+            let isExpired = false;
+
+            if (isQrAccess) {
+                if (tokenParam) {
+                    if (tokenParam !== sessionToken) {
+                        // 새 QR 토큰 감지 시 세션 시작 시간을 신규 등록
+                        sessionStorage.setItem('qr_session_start', Date.now().toString());
+                        sessionStorage.setItem('qr_session_token', tokenParam);
+                        isValid = true;
+                    } else if (sessionStart) {
+                        // 기존 세션이 존재하고 토큰이 일치하면(새로고침 등) 경과 시간 체크
+                        const elapsed = Date.now() - parseInt(sessionStart, 10);
+                        if (elapsed < 60000) {
+                            isValid = true;
+                        } else {
+                            isExpired = true;
+                        }
+                    } else {
+                        // 세션 시작 시간이 비어 있는 경우 초기화
+                        sessionStorage.setItem('qr_session_start', Date.now().toString());
+                        isValid = true;
+                    }
+                } else {
+                    // 토큰 없이 qr=true만 있는 경우
+                    if (sessionStart) {
+                        const elapsed = Date.now() - parseInt(sessionStart, 10);
+                        if (elapsed < 60000) {
+                            isValid = true;
+                        } else {
+                            isExpired = true;
+                        }
+                    } else {
+                        sessionStorage.setItem('qr_session_start', Date.now().toString());
+                        isValid = true;
+                    }
+                }
+            } else {
+                // qr=true 파라미터가 없으면 직접 URL 입력으로 간주
+                isValid = false;
+            }
+
+            if (!isValid || isExpired) {
+                // 접속이 유효하지 않거나 만료된 경우 렌더링 방지
+                document.documentElement.classList.add('qr-unauthorized');
+                const style = document.createElement('style');
+                style.innerHTML = 'html.qr-unauthorized body { display: none !important; }';
+                document.head.appendChild(style);
+
+                window.addEventListener('DOMContentLoaded', () => {
+                    showBlockedScreen(isExpired);
+                });
+            } else {
+                // 유효한 접속일 경우 타이머 가동
+                window.addEventListener('DOMContentLoaded', () => {
+                    startExpiryTimer();
+                });
+            }
+
+            // 차단 화면 구성 함수
+            function showBlockedScreen(expired) {
+                document.body.innerHTML = `
+                    <div style="
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        width: 100vw;
+                        height: 100vh;
+                        background-color: #ffffff;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        z-index: 999999;
+                        font-family: 'Noto Sans KR', sans-serif;
+                        color: #333333;
+                        text-align: center;
+                        box-sizing: border-box;
+                        padding: 20px;
+                    ">
+                        <div>
+                            <h1 style="
+                                font-size: 2rem;
+                                font-weight: 700;
+                                margin-bottom: 15px;
+                                color: #e60012;
+                            ">${expired ? 'QR 재접속 필요' : '올바르지 않은 접근'}</h1>
+                            <p style="
+                                font-size: 1.1rem;
+                                color: #666666;
+                                line-height: 1.6;
+                                margin: 0;
+                            ">${expired ? '접속 시간(1분)이 만료되었습니다.<br>QR 코드를 다시 스캔하여 접속해 주세요.' : '이 페이지는 QR 코드를 통해서만 접속할 수 있습니다.'}</p>
+                        </div>
+                    </div>
+                `;
+                document.body.style.margin = '0';
+                document.body.style.padding = '0';
+                document.body.style.overflow = 'hidden';
+                document.body.style.background = '#ffffff';
+                document.documentElement.classList.add('qr-unauthorized');
+            }
+
+            // 실시간 타이머 작동 함수
+            function startExpiryTimer() {
+                const timerElement = document.getElementById('session-timer');
+                
+                const checkExpiry = () => {
+                    const start = sessionStorage.getItem('qr_session_start');
+                    if (!start) return;
+
+                    const elapsed = Date.now() - parseInt(start, 10);
+                    const remaining = Math.max(0, 60000 - elapsed);
+                    
+                    // 남은 시간 포맷팅 (MM:SS)
+                    const minutes = Math.floor(remaining / 60000);
+                    const seconds = Math.floor((remaining % 60000) / 1000);
+                    const timeString = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+                    
+                    if (timerElement) {
+                        timerElement.textContent = timeString;
+                    }
+
+                    if (remaining <= 0) {
+                        showBlockedScreen(true);
+                        clearInterval(timerInterval);
+                    }
+                };
+
+                // 500ms 단위로 시간 체크 및 표시 업데이트
+                const timerInterval = setInterval(checkExpiry, 500);
+                checkExpiry(); // 즉시 업데이트
+
+                // 화면 복귀 시 잔여 시간 즉시 체크
+                document.addEventListener('visibilitychange', () => {
+                    if (document.visibilityState === 'visible') {
+                        checkExpiry();
+                    }
+                });
+            }
+        })();
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>국민건강보험 - 보안점검표</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -577,10 +728,73 @@
             color: var(--nhis-muted);
             margin-top: 10px;
         }
+
+        /* 타이머 플로팅 위젯 스타일 */
+        #session-timer-widget {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(230, 0, 18, 0.2);
+            padding: 10px 16px;
+            border-radius: 30px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            z-index: 999;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #333333;
+            transition: all 0.3s ease;
+        }
+
+        .timer-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--nhis-red);
+            border-radius: 50%;
+            display: inline-block;
+            animation: pulse 1s infinite alternate;
+        }
+
+        #session-timer {
+            color: var(--nhis-red);
+            font-family: monospace;
+            font-size: 1.05rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        @keyframes pulse {
+            from { opacity: 0.4; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1.1); }
+        }
+
+        @media (max-width: 600px) {
+            #session-timer-widget {
+                bottom: 15px;
+                right: 15px;
+                padding: 8px 12px;
+                font-size: 0.8rem;
+            }
+            #session-timer {
+                font-size: 0.95rem;
+            }
+        }
     </style>
 </head>
 
 <body>
+    <!-- 1분 만료 타이머 플로팅 위젯 -->
+    <div id="session-timer-widget">
+        <span class="timer-dot"></span>
+        <span>남은 시간</span>
+        <strong id="session-timer">01:00</strong>
+    </div>
+
     <div class="header-top">
         <div class="logo-area">
             <img src="logo.png" alt="인천경기지역본부 로고" class="logo-img">
