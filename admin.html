@@ -1256,19 +1256,14 @@
         }
 
         async function saveApprovalSignature(type, dataUrl) {
-            let data = JSON.parse(localStorage.getItem('security_check_data') || '[]');
-            // ID 비교 시 문자열로 변환하여 안전하게 비교
-            let idx = data.findIndex(i => String(i.id) === String(currentItem.id));
-            
-            let updatedItem;
+            // 로컬스토리지 처리를 걷어내고 cachedData에서 현재 항목을 찾음
+            const idx = cachedData.findIndex(i => String(i.id) === String(currentItem.id));
             if (idx === -1) {
-                // 로컬에 해당 기록이 없으면(구글 드라이브 데이터인 경우), 현재 데이터를 기반으로 로컬에 생성
-                updatedItem = { ...currentItem };
-                data.push(updatedItem);
-                idx = data.length - 1;
-            } else {
-                updatedItem = { ...data[idx] };
+                alert('해당 점검 기록을 찾을 수 없습니다.');
+                return;
             }
+
+            const updatedItem = { ...cachedData[idx] };
 
             const existingUserSig = String(currentItem.signature || "").split("|||")[0];
             const existingManagerSig = extractSignature(currentItem, "manager");
@@ -1280,21 +1275,34 @@
             if (type === 'manager') newManagerSig = dataUrl;
             if (type === 'leader') newLeaderSig = dataUrl;
 
-            // signature 필드에 결합하여 구글 서버에 영구 보존
+            // signature 필드에 결합하여 저장
             updatedItem.signature = existingUserSig + "|||" + newManagerSig + "|||" + newLeaderSig;
             
-            // 로컬 메모리 즉시 반영용 속성
+            // 캐시 데이터의 결재 서명 값 갱신
             updatedItem.managerSignature = newManagerSig;
             updatedItem.leaderSignature = newLeaderSig;
             
-            updatedItem.modifiedAt = Date.now(); // 수정 일시 업데이트
+            updatedItem.modifiedAt = Date.now();
             updatedItem.lastModified = updatedItem.modifiedAt;
 
-            // 로컬 스토리지 업데이트
-            data[idx] = updatedItem;
-            localStorage.setItem('security_check_data', JSON.stringify(data));
+            // 로딩 상태 표시 (모달 내부 교체)
+            const modalBody = document.querySelector('.modal-body');
+            const originalContent = modalBody.innerHTML;
+            modalBody.innerHTML = `
+                <div style="text-align:center; padding:30px; font-family:'Noto Sans KR', sans-serif;">
+                    <div style="width:40px; height:40px; border:3px solid #f3f3f3; border-top:3px solid var(--nhis-red); border-radius:50%; animation:spin 1s linear infinite; margin: 0 auto 15px;"></div>
+                    <div style="margin-bottom:8px; font-weight:bold; color:var(--nhis-red); font-size:1.05rem;">구글 시트에 서명을 저장하는 중입니다...</div>
+                    <div style="font-size:0.8rem; color:#888;">잠시만 기다려 주세요.</div>
+                </div>
+                <style>
+                    @keyframes spin {
+                        0% { transform: rotate(0deg); }
+                        100% { transform: rotate(360deg); }
+                    }
+                </style>
+            `;
 
-            // 구글 드라이브(GAS) 업데이트
+            // 구글 드라이브(GAS) 업데이트 전송 및 완료 대기
             if (GAS_URL && !GAS_URL.includes('YOUR_GAS_WEB_APP_URL_HERE')) {
                 try {
                     const submission = {
@@ -1302,23 +1310,35 @@
                         action: 'overwrite',
                         oldId: currentItem.id
                     };
-                    fetch(GAS_URL, {
+                    
+                    await fetch(GAS_URL, {
                         method: 'POST',
                         mode: 'no-cors',
                         headers: { 'Content-Type': 'text/plain' },
                         body: JSON.stringify(submission)
                     });
                     
-                    // 캐시 업데이트 (관리자 페이지 내부 즉시 반영용)
-                    if (typeof cachedData !== 'undefined') {
-                        const cIdx = cachedData.findIndex(i => String(i.id) === String(currentItem.id));
-                        if (cIdx !== -1) cachedData[cIdx] = updatedItem;
-                    }
-                } catch (err) { console.error('Approval sync error:', err); }
+                    // 캐시 업데이트
+                    cachedData[idx] = updatedItem;
+                    
+                    alert('서명이 완료되었습니다.');
+                } catch (err) {
+                    console.error('Approval sync error:', err);
+                    alert('구글 시트 동기화 중 오류가 발생했습니다. 다시 시도해 주세요.');
+                    modalBody.innerHTML = originalContent; // 복원
+                    return;
+                }
+            } else {
+                alert('구글 앱스 스크립트 URL이 설정되지 않았습니다.');
+                modalBody.innerHTML = originalContent;
+                return;
             }
+
             document.getElementById('modal').style.display = 'none';
-            alert('서명이 저장되었습니다.');
-            renderRecords(false);
+            modalBody.innerHTML = originalContent; // 모달 복원
+            
+            // 구글 시트 데이터를 실시간 다시 조회해서 렌더링
+            await renderRecords(true);
         }
 
         function openEdit(id) {
@@ -1347,7 +1367,6 @@
             document.getElementById('edit_department').value = item.department || '';
             document.getElementById('edit_checkerType').value = item.checkerType || (item.items && item.items.item1 && item.items.item1.type) || '최종퇴청자';
             
-            // 직급이 "1" 또는 "1급" 형식일 수 있으므로 숫자만 추출하여 처리
             let posVal = String(item.position || '');
             if (posVal.includes('급')) posVal = posVal.replace('급', '');
             document.getElementById('edit_position').value = posVal;
@@ -1363,7 +1382,6 @@
             area.innerHTML = '<label class="full-width" style="margin-bottom:5px;">점검 항목별 상태</label>';
             const labels = ["1.화재 단속 상태", "2.소등 및 전원 상태", "3.서류보관 상태", "4.문단속 상태"];
             
-            // items 파싱 시도 (비표준 형식 대응)
             let itemsObj = item.items;
             if (typeof itemsObj === 'string') {
                 try {
@@ -1387,7 +1405,6 @@
             document.getElementById('modal').style.display = 'flex';
         }
 
-        // 한국식 날짜 포맷 변환 헬퍼 (YYYY. M. D. 오전/오후 H:mm:ss)
         function formatKoreanDate(dateStr) {
             const d = new Date(dateStr);
             if (isNaN(d.getTime())) return dateStr;
@@ -1403,7 +1420,7 @@
         }
 
         async function saveChanges() {
-            // 수정할 대상 데이터를 cachedData와 localStorage 모두에서 찾음
+            // 수정할 대상 데이터를 cachedData에서 찾음
             const allData = getMergedData();
             const item = allData.find(i => i.id === currentId);
             if (!item) return;
@@ -1419,22 +1436,17 @@
             updatedItem.checkerType = document.getElementById('edit_checkerType').value;
             updatedItem.position = document.getElementById('edit_position').value;
             updatedItem.userName = document.getElementById('edit_userName').value;
-            // 기존의 결합된 서명 정보 유지 추출
+            
             const existingUserSig = String(currentEditingSig || "").split("|||")[0];
             const existingManagerSig = extractSignature(item, 'manager');
             const existingLeaderSig = extractSignature(item, 'leader');
 
-            // signature 필드 결합 기입 (유실 방지)
             updatedItem.signature = existingUserSig + "|||" + existingManagerSig + "|||" + existingLeaderSig;
-            
-            // 로컬 메모리 반영용
             updatedItem.managerSignature = existingManagerSig;
             updatedItem.leaderSignature = existingLeaderSig;
 
-            // [강화] 수정 시각 기록 (동일 ID 중 최우선 채택을 위함)
             updatedItem.modifiedAt = Date.now();
 
-            // 점검 항목 업데이트
             if (!updatedItem.items || typeof updatedItem.items !== 'object') {
                 updatedItem.items = {};
             }
@@ -1445,22 +1457,24 @@
                 updatedItem.items[`item${i}`].type = updatedItem.checkerType;
             }
 
-            // 1. 로컬 스토리지 업데이트 (동기화 용)
-            const localData = JSON.parse(localStorage.getItem('security_check_data') || '[]');
-            const lIdx = localData.findIndex(i => i.id === currentId);
-            if (lIdx !== -1) {
-                localData[lIdx] = updatedItem;
-                localStorage.setItem('security_check_data', JSON.stringify(localData));
-            }
+            // 로딩 상태 표시
+            const modalBody = document.querySelector('.modal-body');
+            const originalContent = modalBody.innerHTML;
+            modalBody.innerHTML = `
+                <div style="text-align:center; padding:30px; font-family:'Noto Sans KR', sans-serif;">
+                    <div style="width:40px; height:40px; border:3px solid #f3f3f3; border-top:3px solid var(--nhis-red); border-radius:50%; animation:spin 1s linear infinite; margin: 0 auto 15px;"></div>
+                    <div style="margin-bottom:8px; font-weight:bold; color:var(--nhis-red); font-size:1.05rem;">구글 시트에 데이터를 저장하는 중입니다...</div>
+                    <div style="font-size:0.8rem; color:#888;">잠시만 기다려 주세요.</div>
+                </div>
+                <style>
+                    @keyframes spin {
+                        0% { transform: rotate(0deg); }
+                        100% { transform: rotate(360deg); }
+                    }
+                </style>
+            `;
 
-            // 2. 관리자 페이지 캐시(cachedData) 즉시 반영
-            if (typeof cachedData !== 'undefined') {
-                const cIdx = cachedData.findIndex(i => i.id === currentId);
-                if (cIdx !== -1) cachedData[cIdx] = updatedItem;
-                else cachedData.push(updatedItem); // 캐시에 없던 경우 추가 (로컬에서 온 데이터 등)
-            }
-
-            // 3. 구글 드라이브(GAS) 업데이트 알림
+            // 구글 드라이브(GAS) 업데이트 알림
             if (GAS_URL && !GAS_URL.includes('YOUR_GAS_WEB_APP_URL_HERE')) {
                 try {
                     const submission = {
@@ -1469,52 +1483,66 @@
                         oldId: currentId
                     };
 
-                    fetch(GAS_URL, {
+                    await fetch(GAS_URL, {
                         method: 'POST',
                         mode: 'no-cors',
                         headers: { 'Content-Type': 'text/plain' },
                         body: JSON.stringify(submission)
                     });
-                    console.log('구글 드라이브 업데이트 요청 전송 완료');
+                    
+                    // 캐시 업데이트
+                    if (typeof cachedData !== 'undefined') {
+                        const cIdx = cachedData.findIndex(i => String(i.id) === String(currentId));
+                        if (cIdx !== -1) cachedData[cIdx] = updatedItem;
+                        else cachedData.push(updatedItem);
+                    }
+                    
+                    alert('수정 사항이 저장되었습니다.');
                 } catch (err) {
                     console.error('Drive sync error:', err);
+                    alert('구글 시트 동기화 중 오류가 발생했습니다. 다시 시도해 주세요.');
+                    modalBody.innerHTML = originalContent; // 복원
+                    return;
                 }
+            } else {
+                alert('구글 앱스 스크립트 URL이 설정되지 않았습니다.');
+                modalBody.innerHTML = originalContent;
+                return;
             }
 
             document.getElementById('modal').style.display = 'none';
-            alert('수정 사항이 저장되었습니다.');
-            renderRecords(false);
+            modalBody.innerHTML = originalContent; // 복원
+            
+            await renderRecords(true);
         }
 
         async function del(id) {
             if (!confirm('저장소에서도 삭제됩니다. 정말로 삭제하시겠습니까?')) return;
 
-            // 로컬 스토리지 삭제
-            const data = JSON.parse(localStorage.getItem('security_check_data') || '[]');
-            localStorage.setItem('security_check_data', JSON.stringify(data.filter(i => i.id !== id)));
-
-            // 구글 드라이브 삭제 전송
+            // 구글 드라이브 삭제 전송 및 대기
             if (GAS_URL && !GAS_URL.includes('YOUR_GAS_WEB_APP_URL_HERE')) {
                 try {
-                    // mode: 'no-cors'를 쓰면 성공 여부를 알 순 없지만 전송은 됨. 
-                    // 하지만 삭제 확인을 위해 일반 fetch 고려 (CORS 설정 필수)
                     await fetch(GAS_URL, {
                         method: 'POST',
                         mode: 'no-cors',
-                        // text/plain을 사용하여 CORS preflight(사전 요청) 없이 전송
                         headers: { 'Content-Type': 'text/plain' },
                         body: JSON.stringify({ action: 'delete', id: id })
                     });
+                    
                     // 캐시 업데이트
                     cachedData = cachedData.filter(i => String(i.id) !== String(id));
+                    alert('삭제되었습니다.');
                 } catch (err) {
                     console.error('Delete error:', err);
                     alert('구글 드라이브 삭제 요청 중 오류가 발생했습니다.');
+                    return;
                 }
+            } else {
+                alert('구글 앱스 스크립트 URL이 설정되지 않았습니다.');
+                return;
             }
 
-            alert('삭제되었습니다.');
-            renderRecords(false);
+            await renderRecords(true);
         }
 
         function exportOfficialPDF() {
@@ -1935,12 +1963,7 @@
             initModalCanvas();
         };
 
-        // 타 탭에서의 변경 사항 실시간 반영
-        window.addEventListener('storage', (e) => {
-            if (e.key === 'security_check_data') {
-                renderRecords();
-            }
-        });
+
     </script>
 </body>
 
