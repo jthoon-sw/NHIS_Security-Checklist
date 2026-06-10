@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <script>
-        (function() {
+        (function () {
             // QR 접속 및 시간 제한 관리
             const urlParams = new URLSearchParams(window.location.search);
             const isQrAccess = urlParams.get('qr') === 'true';
@@ -80,8 +80,8 @@
             } else {
                 // 접속이 허용된 경우: 주소창을 /home 으로 깔끔하게 치환
                 // (새로고침 시 404가 발생하면 404.html이 이를 최상위 index.html로 우회 리다이렉트합니다.)
-                const cleanUrl = window.location.protocol + "//" + window.location.host + 
-                                 window.location.pathname.replace(/\/$/, '') + '/home';
+                const cleanUrl = window.location.protocol + "//" + window.location.host +
+                    window.location.pathname.replace(/\/$/, '') + '/home';
                 window.history.replaceState({}, document.title, cleanUrl);
 
                 // 유효한 접속일 경우 타이머 가동
@@ -122,7 +122,7 @@
                                 color: #666666;
                                 line-height: 1.6;
                                 margin: 0;
-                            ">${expired ? '접속 시간(1분)이 만료되었습니다.<br>QR 코드를 다시 스캔하여 접속해 주세요.' : '이 페이지는 QR 코드를 통해서만 접속할 수 있습니다.'}</p>
+                            ">${expired ? '접속시간(1분)이 만료되었습니다.<br>QR 코드를 다시 스캔하여 접속해 주세요.' : '이 페이지는 QR 코드를 통해서만 접속할 수 있습니다.'}</p>
                         </div>
                     </div>
                 `;
@@ -136,19 +136,19 @@
             // 실시간 타이머 작동 함수
             function startExpiryTimer() {
                 const timerElement = document.getElementById('session-timer');
-                
+
                 const checkExpiry = () => {
                     const start = sessionStorage.getItem('qr_session_start');
                     if (!start) return;
 
                     const elapsed = Date.now() - parseInt(start, 10);
                     const remaining = Math.max(0, 60000 - elapsed);
-                    
+
                     // 남은 시간 포맷팅 (MM:SS)
                     const minutes = Math.floor(remaining / 60000);
                     const seconds = Math.floor((remaining % 60000) / 1000);
                     const timeString = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-                    
+
                     if (timerElement) {
                         timerElement.textContent = timeString;
                     }
@@ -787,8 +787,15 @@
         }
 
         @keyframes pulse {
-            from { opacity: 0.4; transform: scale(0.9); }
-            to { opacity: 1; transform: scale(1.1); }
+            from {
+                opacity: 0.4;
+                transform: scale(0.9);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1.1);
+            }
         }
 
         @media (max-width: 600px) {
@@ -798,6 +805,7 @@
                 padding: 8px 12px;
                 font-size: 0.8rem;
             }
+
             #session-timer {
                 font-size: 0.95rem;
             }
@@ -886,8 +894,8 @@
                                 <td>1. 화재 단속 상태</td>
                                 <td>
                                     <div class="item-status-group">
-                                        <label class="radio-option"><input type="radio" name="item1" value="양호"
-                                                required checked> 양호</label>
+                                        <label class="radio-option"><input type="radio" name="item1" value="양호" required
+                                                checked> 양호</label>
                                         <label class="radio-option"><input type="radio" name="item1" value="불량">
                                             불량</label>
                                     </div>
@@ -897,8 +905,8 @@
                                 <td>2. 소등 및 각종 전원 상태</td>
                                 <td>
                                     <div class="item-status-group">
-                                        <label class="radio-option"><input type="radio" name="item2" value="양호"
-                                                required checked> 양호</label>
+                                        <label class="radio-option"><input type="radio" name="item2" value="양호" required
+                                                checked> 양호</label>
                                         <label class="radio-option"><input type="radio" name="item2" value="불량">
                                             불량</label>
                                     </div>
@@ -908,8 +916,8 @@
                                 <td>3. 서류보관/잠금장치 상태</td>
                                 <td>
                                     <div class="item-status-group">
-                                        <label class="radio-option"><input type="radio" name="item3" value="양호"
-                                                required checked> 양호</label>
+                                        <label class="radio-option"><input type="radio" name="item3" value="양호" required
+                                                checked> 양호</label>
                                         <label class="radio-option"><input type="radio" name="item3" value="불량">
                                             불량</label>
                                     </div>
@@ -919,8 +927,8 @@
                                 <td>4. 문단속 상태</td>
                                 <td>
                                     <div class="item-status-group">
-                                        <label class="radio-option"><input type="radio" name="item4" value="양호"
-                                                required checked> 양호</label>
+                                        <label class="radio-option"><input type="radio" name="item4" value="양호" required
+                                                checked> 양호</label>
                                         <label class="radio-option"><input type="radio" name="item4" value="불량">
                                             불량</label>
                                     </div>
@@ -1065,7 +1073,7 @@
                 const rect = modalCanvas.getBoundingClientRect();
                 const clientX = e.touches ? e.touches[0].clientX : e.clientX;
                 const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-                
+
                 // 화면상 CSS 크기와 물리 픽셀 크기(300x150)의 비율차를 적용해 그리기 좌표 보정
                 const x = (clientX - rect.left) * (300 / rect.width);
                 const y = (clientY - rect.top) * (150 / rect.height);
